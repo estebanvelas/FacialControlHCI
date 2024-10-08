@@ -283,7 +283,8 @@ def DisplayLettersMenu(theLabelsList,totalN,theTopFrame,theCurrentSelection):
         if i < len(labelsLettersMenu):
             prettyPrintInCamera(theTopFrame, labelsLettersMenu[i], centerOfContours[i], color)
         else:
-            prettyPrintInCamera(theTopFrame, theLabelsList[i-len(labelsLettersMenu)], centerOfContours[i], redFrameColor)
+            if (i-len(labelsLettersMenu)>0):
+                prettyPrintInCamera(theTopFrame, theLabelsList[i-len(labelsLettersMenu)], centerOfContours[i], redFrameColor)
 
 def DisplayOtherMenus(theLabelsList,theLabelsOptions, totalN, theTopFrame):
     for i in range(totalN):
@@ -297,21 +298,22 @@ def DisplayOtherMenus(theLabelsList,theLabelsOptions, totalN, theTopFrame):
 
 def GetLettersMenu(theLabelsList,totalN,theTopFrame,theCurrentSelection):
     createdLabel = []
-    lettersPerArea = len(theLabelsList) / (totalN - len(labelsLettersMenu))
-    for i in range(totalN):
-        # set option labels on topFrame to make them not transparent
-        if i < len(labelsLettersMenu):
-            prettyPrintInCamera(theTopFrame, labelsLettersMenu[i], centerOfContours[i],color)
-        else:
-            # divide ABC between remaining areas
-            startABCIndex = int((i - len(labelsLettersMenu)) * lettersPerArea)
-            endABCIndex = int((i - len(labelsLettersMenu)) * lettersPerArea + lettersPerArea)
-            createdLabel.append(theLabelsList[startABCIndex:endABCIndex])
-            if len(createdLabel[i-len(labelsLettersMenu)])<0:
-                createdLabel[i-len(labelsLettersMenu)] = theLabelsList[i-len(labelsLettersMenu)]
-    for loopText in range(totalN-len(labelsLettersMenu)):
-        print(loopText)
-        prettyPrintInCamera(theTopFrame, createdLabel[loopText], centerOfContours[loopText], lettersColor)
+    lettersPerArea = math.ceil(len(theLabelsList) / (totalN - len(labelsLettersMenu)))
+    if lettersPerArea>0:
+        for i in range(totalN):
+            # set option labels on topFrame to make them not transparent
+            if i < len(labelsLettersMenu):
+                prettyPrintInCamera(theTopFrame, labelsLettersMenu[i], centerOfContours[i],color)
+            else:
+                # divide ABC between remaining areas
+                startABCIndex = int((i - len(labelsLettersMenu)) * lettersPerArea)
+                endABCIndex = int((i - len(labelsLettersMenu)) * lettersPerArea + lettersPerArea)
+                createdLabel.append(theLabelsList[startABCIndex:endABCIndex])
+                if len(createdLabel[i-len(labelsLettersMenu)])<0:
+                    createdLabel[i-len(labelsLettersMenu)] = theLabelsList[i-len(labelsLettersMenu)]
+        for loopText in range(totalN-len(labelsLettersMenu)):
+            print(loopText)
+            prettyPrintInCamera(theTopFrame, createdLabel[loopText], centerOfContours[loopText], lettersColor)
     return createdLabel,theCurrentSelection
 
 def prettyPrintInCamera(topFrame, text, theOrg, theColor, lineType=cv2.LINE_AA):
