@@ -8,7 +8,7 @@ labelsABC=ABCDEFGHIJKLMNOPQRSTUVWXYZ
 labelsSpecial=`1234567890~!@#$%^&*()-_+[]\;',./<>?:{}=
 
 #------------------Custom Labels for Quick Options
-labelsQuick=["Yes","No", "Not Sure", "Food", "Bathroom", "Hot", "Cold", "Hurts"]
+labelsQuick=Yes,No,Not Sure,Food,Bathroom,Hot,Cold,Hurts
 
 #------------------Font Options
 fontScale=0.4

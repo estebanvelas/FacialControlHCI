@@ -31,27 +31,14 @@ totalOptionsN = 8
 mouseSpeed=5
 selectionWaitTime=0.4
 #------------------
-labelsABC="_ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-labelsNumbers="0123456789"
-labelsSpecial="`~!@#$%^&*()_+=;',./<>?:\"{}"
-labelsMainMenu=["Quick", "BackSpace","Space","Mouse", "ABC","Numbers","Special Chars"]
+labelsMainMenu=["LLM","Quick", "BackSpace","Space","Mouse", "ABC","Numbers","Special Chars"]
 labelsLettersMenu=["Quick", "BackSpace", "Back"]
 #------------------
-labelsOptionsMenu=["Back", "Quick"]
-labelsOptions=["Calibrate", "Configure Quick","Alpha"]
 #------------------
 labelsMouseMenu=["Back","Click","Double Click","RightClick"]
 labelsMouse=["Down","Left","Up","Right"]
 #------------------
-labelsQuick=["Yes","No", "Not Sure", "Food", "Bathroom", "Hot", "Cold", "Hurts"]
-labelsQuickOptions=["BackSpace","Back"]
-#------------------
-fontScale=0.4
-fontThickness=1
-
-#------------------
-camSizeX=640
-camSizeY=640
+labelsQuickOptions=["Back","BackSpace"]
 #------------------
 configFilePath='./config.txt'
 
@@ -103,7 +90,7 @@ def GetConfigSettings():
             elif key == "labelsSpecial":
                 labelsSpecial = value
             elif key == "labelsQuick":
-               labelsQuick = value
+               labelsQuick = value.split(',')
             elif key == "fontScale":
                 fontScale = float(value)
             elif key == "fontThickness":
@@ -216,40 +203,43 @@ def GetMenuSystem(theUIFrame, theTopFrame, totalN,theCurrentSelection,theCreated
             DisplayLettersMenu(theCreatedLabelList,totalN,theTopFrame,theCurrentSelection)
         elif(theCurrentSelection[1]=="Quick"):
             DisplayOtherMenus(labelsQuick,labelsQuickOptions, totalN, theTopFrame)
-        elif (theCurrentSelection[1] == "Numbers"):
-            DisplayOtherMenus(labelsOptions, labelsOptionsMenu, totalN, theTopFrame)
-        elif (theCurrentSelection[1] == "SpecialChars"):
-            DisplayOtherMenus(labelsOptions, labelsOptionsMenu, totalN, theTopFrame)
         elif (theCurrentSelection[1] == "MouseControl"):
             DisplayMouseMenu(labelsMouse, labelsMouseMenu, totalN, theTopFrame)
             theCurrentSelection[0] = -1
     else:  # if an option has been chosen
-        # ["Quick", "BackSpace","Space","Mouse", "ABC","Numbers","Special Chars"]
+        # ["LLM","Quick", "BackSpace","Space","Mouse", "ABC","Numbers","Special Chars"]
         if(theCurrentSelection[1]=="MainMenu"):
             theCreatedLabelList=GetMainMenu(totalN,theTopFrame)
             # reset value and select new menu
-            if theCurrentSelection[0]==0:#Quick
+            if theCurrentSelection[0]==0:#LLM
+                theCurrentSelection = [-1, "LLM"]
+                print("menu: " + str(labelsMainMenu[theCurrentSelection[0]]))
+            if theCurrentSelection[0]==1:#Quick
                 theCurrentSelection = [-1, "Quick"]
                 print("menu: " + str(labelsMainMenu[theCurrentSelection[0]]))
-            elif theCurrentSelection[0] == 1:#Backspace
+            elif theCurrentSelection[0] == 2:#Backspace
                 theCurrentSelection[0] = -1
                 print("pressed: Backspace")
                 keyboard.press(Key.backspace)
                 keyboard.release(Key.backspace)
-            elif theCurrentSelection[0] == 2:#Space
+            elif theCurrentSelection[0] == 3:#Space
                 theCurrentSelection[0] = -1
                 print("pressed: Backspace")
                 keyboard.press(Key.space)
                 keyboard.release(Key.space)
-            elif theCurrentSelection[0] == 2:#options
-                theCurrentSelection = [-1, "Options"]
-                print("menu: " + str(labelsMainMenu[theCurrentSelection[0]]))
-            elif theCurrentSelection[0] == 3:#Mouse Control
+            elif theCurrentSelection[0] == 4:#Mouse Control
                 theCurrentSelection = [-1, "MouseControl"]
                 print("menu: " + str(labelsMainMenu[theCurrentSelection[0]]))
-            elif theCurrentSelection[0] >= len(labelsMainMenu):
-                print("Letters Menu: " + str(theCreatedLabelList[theCurrentSelection[0]-len(labelsMainMenu)]))
+            elif theCurrentSelection[0] == 5:#ABC
+                print(f"Letters Menu: {labelsABC}")
                 theCurrentSelection[1] = "MultipleLetters"
+                theCurrentSelection[0] = -1
+            elif theCurrentSelection[0] == 6:  # Numbers
+                print(f"Letters Menu: {labelsNumbers}")
+                theCurrentSelection[1] = "MultipleNumbers"
+            elif theCurrentSelection[0] == 7:#Special Characters
+                print(f"Letters Menu: {labelsSpecial}")
+                theCurrentSelection[1] = "MultipleSpecialChars"
         if(theCurrentSelection[1]=="MouseControl"):
             if theCurrentSelection[0] == 0:  #"Back",
                 theCurrentSelection = [-1, "MainMenu"]
@@ -280,6 +270,8 @@ def GetMenuSystem(theUIFrame, theTopFrame, totalN,theCurrentSelection,theCreated
                 mouse.move(mouseSpeed, 0)
                 print("mouse moved left: " + str(mouseSpeed))
         if(theCurrentSelection[1]=="MultipleLetters"):
+            if (theCreatedLabelList[0]==""):
+                theCreatedLabelList=labelsABC
             #when selecting the letter menu
             if theCurrentSelection[0]==0:#"Quick", "", ""]
                 theCurrentSelection = [-1, "Quick"]
@@ -306,8 +298,12 @@ def GetMenuSystem(theUIFrame, theTopFrame, totalN,theCurrentSelection,theCreated
                     keyboard.press(str(theCreatedLabelList[theCurrentSelection[0] - len(labelsLettersMenu)]))
                     keyboard.release(str(theCreatedLabelList[theCurrentSelection[0] - len(labelsLettersMenu)]))
             elif (sizeOfLabelText>1):
+                selectedFromListIndex=theCurrentSelection[0] - len(labelsLettersMenu)
+                if(selectedFromListIndex<0):
+                    selectedFromListIndex=0
+                print(f"label list: {theCreatedLabelList}, selected from list: {selectedFromListIndex}")
                 theCreatedLabelList, theCurrentSelection = GetLettersMenu(
-                    theCreatedLabelList[theCurrentSelection[0] - len(labelsMainMenu)+1], totalN, theTopFrame,theCurrentSelection)
+                    theCreatedLabelList[selectedFromListIndex], totalN, theTopFrame,theCurrentSelection)
 
             theCurrentSelection[0] = -1
         if(theCurrentSelection[1]=="Quick"):
@@ -321,18 +317,6 @@ def GetMenuSystem(theUIFrame, theTopFrame, totalN,theCurrentSelection,theCreated
             elif(theCurrentSelection[0]>=len(labelsQuickOptions)):
                 print("Typed Quick: "+labelsQuick[theCurrentSelection[0]-len(labelsQuickOptions)])
                 keyboard.type(" "+labelsQuick[theCurrentSelection[0]-len(labelsQuickOptions)]+" ")
-            theCurrentSelection[0] = -1
-        if (theCurrentSelection[1] == "Options"):
-            DisplayOtherMenus(labelsOptions, labelsOptionsMenu, totalN, theTopFrame)
-            if theCurrentSelection[0] == 0:  #["Back", "Quick"]
-                theCurrentSelection = [-1, "MainMenu"]
-                print("Selected Option: MainMenu")
-            elif theCurrentSelection[0] == 1:
-                theCurrentSelection = [-1, "Quick"]
-                print("Selected Option: Quick")
-            elif (theCurrentSelection[0] >= len(labelsOptionsMenu)) and (theCurrentSelection[0]-len(labelsOptions) <= len(labelsOptions)):
-                print("Selected Option: "+labelsOptions[theCurrentSelection[0]-len(labelsOptionsMenu)])
-
             theCurrentSelection[0] = -1
 
     return theCurrentSelection,theCreatedLabelList
@@ -401,6 +385,8 @@ def GetMainMenu(totalN,theTopFrame):
     createdLabel = []
     for i in range(totalN):
         # set option labels on topFrame to make them not transparent
+        if(totalN<=len(labelsMainMenu)):
+            createdLabel.append(labelsABC)
         if i < len(labelsMainMenu):
             prettyPrintInCamera(theTopFrame, labelsMainMenu[i], centerOfContours[i], color, cv2.LINE_AA)
         else:
@@ -440,10 +426,11 @@ def GetSelectionLogic(theSelectionCurrentTime,theCurrentSelection,theSelected,th
         theCurrentSelection[0] = thePrevSelected
         print("Selected: " + str(theCurrentSelection[0]))
         thePrevSelected = theSelected
-
     return theSelected,thePrevSelected,theCurrentSelection,theSelectionCurrentTime
 
-totalOptionsN,mouseSpeed,selectionWaitTime,labelsABC,labelsQuick,fontScale,fontThickness,camSizeX,camSizeY=GetConfigSettings()
+
+
+totalOptionsN,mouseSpeed,selectionWaitTime,labelsABC,labelsNumbers,labelsSpecial,labelsQuick,fontScale,fontThickness,camSizeX,camSizeY=GetConfigSettings()
 
 mpDraw = mp.solutions.drawing_utils
 mpFaceMesh = mp.solutions.face_mesh
