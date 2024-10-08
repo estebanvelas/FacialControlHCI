@@ -32,7 +32,9 @@ mouseSpeed=5
 selectionWaitTime=0.4
 #------------------
 labelsABC="_ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-labelsMainMenu=["Quick", "BackSpace", "Options","Mouse"]
+labelsNumbers="0123456789"
+labelsSpecial="`~!@#$%^&*()_+=;',./<>?:\"{}"
+labelsMainMenu=["Quick", "BackSpace","Space","Mouse", "ABC","Numbers","Special Chars"]
 labelsLettersMenu=["Quick", "BackSpace", "Back"]
 #------------------
 labelsOptionsMenu=["Back", "Quick"]
@@ -44,7 +46,16 @@ labelsMouse=["Down","Left","Up","Right"]
 labelsQuick=["Yes","No", "Not Sure", "Food", "Bathroom", "Hot", "Cold", "Hurts"]
 labelsQuickOptions=["BackSpace","Back"]
 #------------------
+fontScale=0.4
+fontThickness=1
 
+#------------------
+camSizeX=640
+camSizeY=640
+#------------------
+configFilePath='./config.txt'
+
+#------------------
 #menu selection init hidden variables
 createdLabelsList=[]
 selectionCurrentTime=0
@@ -57,8 +68,56 @@ greenFrameColor = (0, 255, 0)  # BGR
 redFrameColor = (0, 0, 255)  # BGR
 alpha = 0.3
 font=cv2.FONT_HERSHEY_SIMPLEX
-fontScale=0.4
-fontThickness=1
+
+
+def GetConfigSettings():
+    totalOptionsN = 8
+    mouseSpeed = 5
+    selectionWaitTime = 0.4
+    labelsABC = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    labelsNumbers="0123456789"
+    labelsSpecial="`~!@#$%^&*()-_\"+[]\;',./<>?:{}="
+    labelsQuick = ["Yes", "No", "Not Sure", "Food", "Bathroom", "Hot", "Cold", "Hurts"]
+    fontScale = 0.4
+    fontThickness = 1
+    camSizeX = 640
+    camSizeY = 640
+    with open(configFilePath, 'r') as file:
+        for line in file:
+            # Strip whitespace and check if the line starts with #
+            line = line.strip()
+            if line.startswith('#') or not line:
+                continue  # Skip comments and empty lines
+
+            key, value = line.strip().split('=',1)
+            if key == "totalOptionsN":
+                totalOptionsN = int(value)
+            elif key == "mouseSpeed":
+                mouseSpeed = int(value)
+            elif key == "selectionWaitTime":
+                selectionWaitTime = float(value)
+            elif key == "labelsABC":
+                labelsABC = value
+            elif key == "labelsNumbers":
+                labelsNumbers = value
+            elif key == "labelsSpecial":
+                labelsSpecial = value
+            elif key == "labelsQuick":
+               labelsQuick = value
+            elif key == "fontScale":
+                fontScale = float(value)
+            elif key == "fontThickness":
+                fontThickness = int(value)
+            elif key == "camSizeX":
+                camSizeX = int(value)
+            elif key == "camSizeY":
+                camSizeY = int(value)
+
+    # Print the variables
+    print(f"totalOptionsN: {totalOptionsN}, mouseSpeed: {mouseSpeed}, selectionWaitTime: {selectionWaitTime}"
+          f", labelsABC: {labelsABC}, labelsQuick: {labelsQuick}, fontScale: {fontScale}"
+          f", fontThickness: {fontThickness}, camSizeX: {camSizeX}, camSizeY: {camSizeY}")
+    return totalOptionsN,mouseSpeed,selectionWaitTime,labelsABC,labelsNumbers,labelsSpecial,labelsQuick,fontScale,fontThickness,camSizeX,camSizeY
 
 def GetAreaPoints(totalN,centerOfFaceX,centerOfFaceY,areaSize, rotationAngle):
     #(0,0) being center of face
@@ -150,18 +209,22 @@ def GetMenuSystem(theUIFrame, theTopFrame, totalN,theCurrentSelection,theCreated
     # Menu System--------------
     #--------------------------
     if theCurrentSelection[0] < 0:#no option has been chosen
+        # ["Quick", "BackSpace","Space","Mouse", "ABC","Numbers","Special Chars"]
         if theCurrentSelection[1]=="MainMenu":
             GetMainMenu(totalN, theTopFrame)
         elif(theCurrentSelection[1]=="MultipleLetters"):
             DisplayLettersMenu(theCreatedLabelList,totalN,theTopFrame,theCurrentSelection)
         elif(theCurrentSelection[1]=="Quick"):
             DisplayOtherMenus(labelsQuick,labelsQuickOptions, totalN, theTopFrame)
-        elif (theCurrentSelection[1] == "Options"):
+        elif (theCurrentSelection[1] == "Numbers"):
+            DisplayOtherMenus(labelsOptions, labelsOptionsMenu, totalN, theTopFrame)
+        elif (theCurrentSelection[1] == "SpecialChars"):
             DisplayOtherMenus(labelsOptions, labelsOptionsMenu, totalN, theTopFrame)
         elif (theCurrentSelection[1] == "MouseControl"):
             DisplayMouseMenu(labelsMouse, labelsMouseMenu, totalN, theTopFrame)
             theCurrentSelection[0] = -1
     else:  # if an option has been chosen
+        # ["Quick", "BackSpace","Space","Mouse", "ABC","Numbers","Special Chars"]
         if(theCurrentSelection[1]=="MainMenu"):
             theCreatedLabelList=GetMainMenu(totalN,theTopFrame)
             # reset value and select new menu
@@ -173,6 +236,11 @@ def GetMenuSystem(theUIFrame, theTopFrame, totalN,theCurrentSelection,theCreated
                 print("pressed: Backspace")
                 keyboard.press(Key.backspace)
                 keyboard.release(Key.backspace)
+            elif theCurrentSelection[0] == 2:#Space
+                theCurrentSelection[0] = -1
+                print("pressed: Backspace")
+                keyboard.press(Key.space)
+                keyboard.release(Key.space)
             elif theCurrentSelection[0] == 2:#options
                 theCurrentSelection = [-1, "Options"]
                 print("menu: " + str(labelsMainMenu[theCurrentSelection[0]]))
@@ -237,9 +305,10 @@ def GetMenuSystem(theUIFrame, theTopFrame, totalN,theCurrentSelection,theCreated
                 else:
                     keyboard.press(str(theCreatedLabelList[theCurrentSelection[0] - len(labelsLettersMenu)]))
                     keyboard.release(str(theCreatedLabelList[theCurrentSelection[0] - len(labelsLettersMenu)]))
-            else:
+            elif (sizeOfLabelText>1):
                 theCreatedLabelList, theCurrentSelection = GetLettersMenu(
                     theCreatedLabelList[theCurrentSelection[0] - len(labelsMainMenu)+1], totalN, theTopFrame,theCurrentSelection)
+
             theCurrentSelection[0] = -1
         if(theCurrentSelection[1]=="Quick"):
             DisplayOtherMenus(labelsQuick, labelsQuickOptions,totalN, theTopFrame)
@@ -283,8 +352,7 @@ def DisplayLettersMenu(theLabelsList,totalN,theTopFrame,theCurrentSelection):
         if i < len(labelsLettersMenu):
             prettyPrintInCamera(theTopFrame, labelsLettersMenu[i], centerOfContours[i], color)
         else:
-            if (i-len(labelsLettersMenu)>0):
-                prettyPrintInCamera(theTopFrame, theLabelsList[i-len(labelsLettersMenu)], centerOfContours[i], redFrameColor)
+            prettyPrintInCamera(theTopFrame, theLabelsList[i-len(labelsLettersMenu)], centerOfContours[i], redFrameColor)
 
 def DisplayOtherMenus(theLabelsList,theLabelsOptions, totalN, theTopFrame):
     for i in range(totalN):
@@ -375,6 +443,8 @@ def GetSelectionLogic(theSelectionCurrentTime,theCurrentSelection,theSelected,th
 
     return theSelected,thePrevSelected,theCurrentSelection,theSelectionCurrentTime
 
+totalOptionsN,mouseSpeed,selectionWaitTime,labelsABC,labelsQuick,fontScale,fontThickness,camSizeX,camSizeY=GetConfigSettings()
+
 mpDraw = mp.solutions.drawing_utils
 mpFaceMesh = mp.solutions.face_mesh
 faceMesh = mpFaceMesh.FaceMesh(max_num_faces=1)
@@ -388,8 +458,8 @@ if imageOrVideo:
     #print("SourceTop: "+str(sourceTop)+", sourceSide: "+str(sourceSide))
     cameraTopView = cv2.VideoCapture(sourceTop)
     # cameraTopView.set(cv2.CAP_PROP_FPS, 30.0)
-    cameraTopView.set(cv2.CAP_PROP_FRAME_WIDTH, 512);#640
-    cameraTopView.set(cv2.CAP_PROP_FRAME_HEIGHT, 512);#480
+    cameraTopView.set(cv2.CAP_PROP_FRAME_WIDTH, 640);#640
+    cameraTopView.set(cv2.CAP_PROP_FRAME_HEIGHT, 640);#480
 else:
     cameraTopView = cv2.imread("testImages/Sofa2.jpg")
 

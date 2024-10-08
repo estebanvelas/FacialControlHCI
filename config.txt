@@ -1,0 +1,19 @@
+#------------------Menu Selection Variables
+totalOptionsN = 8
+mouseSpeed=5
+selectionWaitTime=0.4
+
+#------------------Custom Labels, other languages possible
+labelsABC=ABCDEFGHIJKLMNOPQRSTUVWXYZ
+labelsSpecial=`1234567890~!@#$%^&*()-_+[]\;',./<>?:{}=
+
+#------------------Custom Labels for Quick Options
+labelsQuick=["Yes","No", "Not Sure", "Food", "Bathroom", "Hot", "Cold", "Hurts"]
+
+#------------------Font Options
+fontScale=0.4
+fontThickness=1
+
+#------------------Camera Options
+camSizeX=640
+camSizeY=640
