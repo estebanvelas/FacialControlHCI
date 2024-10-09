@@ -31,14 +31,14 @@ totalOptionsN = 8
 mouseSpeed=5
 selectionWaitTime=0.4
 #------------------
-labelsMainMenu=["LLM","Quick", "BackSpace","Space","Mouse", "ABC","Numbers","Special Chars"]
+labelsMainMenu=["Quick", "BackSpace","LLM","Space","Mouse", "ABC","Numbers","Special Chars"]
 labelsLettersMenu=["Quick", "BackSpace", "Back"]
 #------------------
 #------------------
-labelsMouseMenu=["Back","Click","Double Click","RightClick"]
+labelsMouseMenu=["Click","Back","Double Click","RightClick"]
 labelsMouse=["Down","Left","Up","Right"]
 #------------------
-labelsQuickOptions=["Back","BackSpace"]
+labelsQuickOptions=["LLM","BackSpace","Back"]
 #------------------
 configFilePath='./config.txt'
 
@@ -196,7 +196,6 @@ def GetMenuSystem(theUIFrame, theTopFrame, totalN,theCurrentSelection,theCreated
     # Menu System--------------
     #--------------------------
     if theCurrentSelection[0] < 0:#no option has been chosen
-        # ["Quick", "BackSpace","Space","Mouse", "ABC","Numbers","Special Chars"]
         if theCurrentSelection[1]=="MainMenu":
             GetMainMenu(totalN, theTopFrame,theCurrentSelection)
         elif(theCurrentSelection[1]=="MultipleLetters"):
@@ -212,24 +211,22 @@ def GetMenuSystem(theUIFrame, theTopFrame, totalN,theCurrentSelection,theCreated
             theCurrentSelection[0] = -1
         elif (theCurrentSelection[1] == "LLM"):
             #todo
-            theCurrentSelection[1] == "MainMenu"
-            theCurrentSelection[0] = -1
+            theCurrentSelection = [-1, "MainMenu"]
     else:  # if an option has been chosen
-        # ["LLM","Quick", "BackSpace","Space","Mouse", "ABC","Numbers","Special Chars"]
         if(theCurrentSelection[1]=="MainMenu"):
             theCreatedLabelList=GetMainMenu(totalN,theTopFrame,theCurrentSelection)
             # reset value and select new menu
-            if theCurrentSelection[0]==0:#LLM
-                theCurrentSelection = [-1, "LLM"]
-                print("menu: " + str(labelsMainMenu[theCurrentSelection[0]]))
-            if theCurrentSelection[0]==1:#Quick
+            if theCurrentSelection[0]==0:#Quick
+                print("Menu: " + str(labelsMainMenu[theCurrentSelection[0]]))
                 theCurrentSelection = [-1, "Quick"]
-                print("menu: " + str(labelsMainMenu[theCurrentSelection[0]]))
-            elif theCurrentSelection[0] == 2:#Backspace
+            elif theCurrentSelection[0] == 1:#Backspace
                 theCurrentSelection[0] = -1
                 print("pressed: Backspace")
                 keyboard.press(Key.backspace)
                 keyboard.release(Key.backspace)
+            elif theCurrentSelection[0]==2:#LLM
+                print(f"Menu: {str(labelsMainMenu[theCurrentSelection[0]])}, selection: {theCurrentSelection[0]}")
+                theCurrentSelection = [-1, "LLM"]
             elif theCurrentSelection[0] == 3:#Space
                 theCurrentSelection[0] = -1
                 print("pressed: Space")
@@ -257,13 +254,15 @@ def GetMenuSystem(theUIFrame, theTopFrame, totalN,theCurrentSelection,theCreated
                 theCreatedLabelList, theCurrentSelection = GetCharacterDivisionMenu(
                     labelsSpecial, totalN, theTopFrame, theCurrentSelection)
         elif(theCurrentSelection[1]=="MouseControl"):
-            if theCurrentSelection[0] == 0:  #"Back",
+            DisplayMouseMenu(labelsMouse, labelsMouseMenu, totalN, theTopFrame)
+            #"Click","Back","Double Click","RightClick"
+            if theCurrentSelection[0] == 2:  #"Back",
                 theCurrentSelection = [-1, "MainMenu"]
                 print("Selected Option: MainMenu")
             elif theCurrentSelection[0] == 1:#down
                 mouse.move(0,mouseSpeed)
                 print("mouse moved down: "+str(mouseSpeed))
-            elif theCurrentSelection[0] == 2:  # Click
+            elif theCurrentSelection[0] == 0:  # Click
                 mouse.press(Button.left)
                 mouse.release(Button.left)
                 theCurrentSelection[0] = -1
@@ -330,13 +329,15 @@ def GetMenuSystem(theUIFrame, theTopFrame, totalN,theCurrentSelection,theCreated
                 theCreatedLabelList, theCurrentSelection = GetCharacterDivisionMenu(
                     theCreatedLabelList[selectedFromListIndex], totalN, theTopFrame,theCurrentSelection)
             theCurrentSelection[0] = -1
-        elif(theCurrentSelection[1]=="Quick"):
+        elif(theCurrentSelection[1]=="Quick"):#"LLM","BackSpace","Back"
             DisplayOtherMenus(labelsQuick, labelsQuickOptions,totalN, theTopFrame)
-            if theCurrentSelection[0] == 0:  # ["BackSpace","Back"]
+            if theCurrentSelection[0] == 0:
+                theCurrentSelection = [-1, "LLM"]
+            elif theCurrentSelection[0] == 1:
                 print("pressed: Backspace")
                 keyboard.press(Key.backspace)
                 keyboard.release(Key.backspace)
-            elif theCurrentSelection[0] == 1:
+            elif theCurrentSelection[0] == 2:
                 theCurrentSelection = [-1, "MainMenu"]
             elif(theCurrentSelection[0]>=len(labelsQuickOptions)):
                 print("Typed Quick: "+labelsQuick[theCurrentSelection[0]-len(labelsQuickOptions)])
@@ -414,7 +415,7 @@ def prettyPrintInCamera(topFrame, text, theOrg, theColor, lineType=cv2.LINE_AA):
     cv2.putText(topFrame, text, theOrg, font, fontScale, theColor, fontThickness,lineType)
 
 
-def GetMainMenu(totalN,theTopFrame,theCurrentSelection             ):
+def GetMainMenu(totalN,theTopFrame,theCurrentSelection):
     createdLabel = []
     for i in range(totalN):
         # set option labels on topFrame to make them not transparent
