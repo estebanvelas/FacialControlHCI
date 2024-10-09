@@ -198,18 +198,26 @@ def GetMenuSystem(theUIFrame, theTopFrame, totalN,theCurrentSelection,theCreated
     if theCurrentSelection[0] < 0:#no option has been chosen
         # ["Quick", "BackSpace","Space","Mouse", "ABC","Numbers","Special Chars"]
         if theCurrentSelection[1]=="MainMenu":
-            GetMainMenu(totalN, theTopFrame)
+            GetMainMenu(totalN, theTopFrame,theCurrentSelection)
         elif(theCurrentSelection[1]=="MultipleLetters"):
-            DisplayLettersMenu(theCreatedLabelList,totalN,theTopFrame,theCurrentSelection)
+            GetLettersMenu(theCreatedLabelList, totalN, theTopFrame, theCurrentSelection)
+        elif (theCurrentSelection[1] == "MultipleNumbers"):
+            GetLettersMenu(theCreatedLabelList, totalN, theTopFrame, theCurrentSelection)
+        elif (theCurrentSelection[1] == "MultipleSpecialChars"):
+            GetLettersMenu(theCreatedLabelList, totalN, theTopFrame, theCurrentSelection)
         elif(theCurrentSelection[1]=="Quick"):
             DisplayOtherMenus(labelsQuick,labelsQuickOptions, totalN, theTopFrame)
         elif (theCurrentSelection[1] == "MouseControl"):
             DisplayMouseMenu(labelsMouse, labelsMouseMenu, totalN, theTopFrame)
             theCurrentSelection[0] = -1
+        elif (theCurrentSelection[1] == "LLM"):
+            #todo
+            theCurrentSelection[1] == "MainMenu"
+            theCurrentSelection[0] = -1
     else:  # if an option has been chosen
         # ["LLM","Quick", "BackSpace","Space","Mouse", "ABC","Numbers","Special Chars"]
         if(theCurrentSelection[1]=="MainMenu"):
-            theCreatedLabelList=GetMainMenu(totalN,theTopFrame)
+            theCreatedLabelList=GetMainMenu(totalN,theTopFrame,theCurrentSelection)
             # reset value and select new menu
             if theCurrentSelection[0]==0:#LLM
                 theCurrentSelection = [-1, "LLM"]
@@ -224,7 +232,7 @@ def GetMenuSystem(theUIFrame, theTopFrame, totalN,theCurrentSelection,theCreated
                 keyboard.release(Key.backspace)
             elif theCurrentSelection[0] == 3:#Space
                 theCurrentSelection[0] = -1
-                print("pressed: Backspace")
+                print("pressed: Space")
                 keyboard.press(Key.space)
                 keyboard.release(Key.space)
             elif theCurrentSelection[0] == 4:#Mouse Control
@@ -232,15 +240,17 @@ def GetMenuSystem(theUIFrame, theTopFrame, totalN,theCurrentSelection,theCreated
                 print("menu: " + str(labelsMainMenu[theCurrentSelection[0]]))
             elif theCurrentSelection[0] == 5:#ABC
                 print(f"Letters Menu: {labelsABC}")
-                theCurrentSelection[1] = "MultipleLetters"
-                theCurrentSelection[0] = -1
+                theCurrentSelection = [-1,"MultipleLetters"]
+                theCreatedLabelList = labelsABC
             elif theCurrentSelection[0] == 6:  # Numbers
                 print(f"Letters Menu: {labelsNumbers}")
-                theCurrentSelection[1] = "MultipleNumbers"
+                theCurrentSelection = [-1,"MultipleNumbers"]
+                theCreatedLabelList = labelsNumbers
             elif theCurrentSelection[0] == 7:#Special Characters
                 print(f"Letters Menu: {labelsSpecial}")
-                theCurrentSelection[1] = "MultipleSpecialChars"
-        if(theCurrentSelection[1]=="MouseControl"):
+                theCurrentSelection = [-1,"MultipleSpecialChars"]
+                theCreatedLabelList = labelsSpecial
+        elif(theCurrentSelection[1]=="MouseControl"):
             if theCurrentSelection[0] == 0:  #"Back",
                 theCurrentSelection = [-1, "MainMenu"]
                 print("Selected Option: MainMenu")
@@ -269,9 +279,19 @@ def GetMenuSystem(theUIFrame, theTopFrame, totalN,theCurrentSelection,theCreated
             elif theCurrentSelection[0] == 7:  # Right
                 mouse.move(mouseSpeed, 0)
                 print("mouse moved left: " + str(mouseSpeed))
-        if(theCurrentSelection[1]=="MultipleLetters"):
-            if (theCreatedLabelList[0]==""):
+        elif(theCurrentSelection[1]=="MultipleLetters" or theCurrentSelection[1]=="MultipleNumbers" or theCurrentSelection[1]=="MultipleSpecialChars"):
+            #select character set
+
+            print(f"label list 1: {theCreatedLabelList}")
+            if theCurrentSelection[1]== -1:
+                return theCurrentSelection,theCreatedLabelList
+            elif (theCreatedLabelList[0]=="" and theCurrentSelection[1]=="MultipleLetters"):
                 theCreatedLabelList=labelsABC
+            elif (theCreatedLabelList[0]=="" and theCurrentSelection[1]=="MultipleNumbers"):
+                theCreatedLabelList=labelsNumbers
+            elif (theCreatedLabelList[0]=="" and theCurrentSelection[1]=="MultipleSpecialChars"):
+                theCreatedLabelList=labelsSpecial
+
             #when selecting the letter menu
             if theCurrentSelection[0]==0:#"Quick", "", ""]
                 theCurrentSelection = [-1, "Quick"]
@@ -283,14 +303,13 @@ def GetMenuSystem(theUIFrame, theTopFrame, totalN,theCurrentSelection,theCreated
                 keyboard.press(Key.backspace)
                 keyboard.release(Key.backspace)
             elif theCurrentSelection[0] == 2:#Back
-                theCurrentSelection[0] = -1
-                theCurrentSelection[1] = "MainMenu"
-                #theCurrentSelection = [-1, "options"]
+                theCurrentSelection = [-1,"MainMenu"]
             #when selecting a letter or group of letters
+
             sizeOfLabelText=len(theCreatedLabelList[theCurrentSelection[0] - len(labelsLettersMenu)])
             if(sizeOfLabelText==1):
                 print("pressed: " + str(theCreatedLabelList[theCurrentSelection[0] - len(labelsLettersMenu)]))
-                DisplayLettersMenu(theCreatedLabelList, totalN, theTopFrame, theCurrentSelection)
+                DisplayCharactersMenu(theCreatedLabelList, totalN, theTopFrame, theCurrentSelection)
                 if (str(theCreatedLabelList[theCurrentSelection[0] - len(labelsLettersMenu)]))=='_':
                     keyboard.press(Key.space)
                     keyboard.release(Key.space)
@@ -301,12 +320,11 @@ def GetMenuSystem(theUIFrame, theTopFrame, totalN,theCurrentSelection,theCreated
                 selectedFromListIndex=theCurrentSelection[0] - len(labelsLettersMenu)
                 if(selectedFromListIndex<0):
                     selectedFromListIndex=0
-                print(f"label list: {theCreatedLabelList}, selected from list: {selectedFromListIndex}")
+                print(f"label list 2: {theCreatedLabelList}, selected from list: {selectedFromListIndex}")
                 theCreatedLabelList, theCurrentSelection = GetLettersMenu(
                     theCreatedLabelList[selectedFromListIndex], totalN, theTopFrame,theCurrentSelection)
-
             theCurrentSelection[0] = -1
-        if(theCurrentSelection[1]=="Quick"):
+        elif(theCurrentSelection[1]=="Quick"):
             DisplayOtherMenus(labelsQuick, labelsQuickOptions,totalN, theTopFrame)
             if theCurrentSelection[0] == 0:  # ["BackSpace","Back"]
                 print("pressed: Backspace")
@@ -318,6 +336,9 @@ def GetMenuSystem(theUIFrame, theTopFrame, totalN,theCurrentSelection,theCreated
                 print("Typed Quick: "+labelsQuick[theCurrentSelection[0]-len(labelsQuickOptions)])
                 keyboard.type(" "+labelsQuick[theCurrentSelection[0]-len(labelsQuickOptions)]+" ")
             theCurrentSelection[0] = -1
+        elif(theCurrentSelection[1]=="LLM"):
+            #todo
+            theCurrentSelection = [-1, "MainMenu"]
 
     return theCurrentSelection,theCreatedLabelList
 
@@ -329,8 +350,9 @@ def DisplayMouseMenu(theLabelsList,theLabelsOptions,totalN,theTopFrame):
         else:
             prettyPrintInCamera(theTopFrame, theLabelsList[int(math.floor(i/2))], centerOfContours[i], redFrameColor)
 
-def DisplayLettersMenu(theLabelsList,totalN,theTopFrame,theCurrentSelection):
+def DisplayCharactersMenu(theLabelsList, totalN, theTopFrame, theCurrentSelection):
     #lettersPerArea = len(theLabelsList) / (totalN - len(labelsLettersMenu))
+    lettersPerArea = math.ceil(len(theLabelsList) / (totalN - len(labelsLettersMenu)))
     for i in range(0,totalN):
         # set option labels on topFrame to make them not transparent
         if i < len(labelsLettersMenu):
@@ -363,9 +385,10 @@ def GetLettersMenu(theLabelsList,totalN,theTopFrame,theCurrentSelection):
                 createdLabel.append(theLabelsList[startABCIndex:endABCIndex])
                 if len(createdLabel[i-len(labelsLettersMenu)])<0:
                     createdLabel[i-len(labelsLettersMenu)] = theLabelsList[i-len(labelsLettersMenu)]
-        for loopText in range(totalN-len(labelsLettersMenu)):
-            print(loopText)
-            prettyPrintInCamera(theTopFrame, createdLabel[loopText], centerOfContours[loopText], lettersColor)
+        print(f"createdLabel: {createdLabel}")
+        for loopText in range(len(labelsLettersMenu),totalN):
+            #print(loopText)
+            prettyPrintInCamera(theTopFrame, createdLabel[loopText-len(labelsLettersMenu)], centerOfContours[loopText], lettersColor)
     return createdLabel,theCurrentSelection
 
 def prettyPrintInCamera(topFrame, text, theOrg, theColor, lineType=cv2.LINE_AA):
@@ -381,11 +404,17 @@ def prettyPrintInCamera(topFrame, text, theOrg, theColor, lineType=cv2.LINE_AA):
     cv2.putText(topFrame, text, theOrg, font, fontScale, theColor, fontThickness,lineType)
 
 
-def GetMainMenu(totalN,theTopFrame):
+def GetMainMenu(totalN,theTopFrame,theCurrentSelection             ):
     createdLabel = []
     for i in range(totalN):
         # set option labels on topFrame to make them not transparent
-        if(totalN<=len(labelsMainMenu)):
+        if (totalN <= len(labelsMainMenu) and theCurrentSelection[1] == "MultipleNumbers"):
+            createdLabel.append(labelsNumbers)
+        elif (totalN <= len(labelsMainMenu) and theCurrentSelection[1] == "MultipleSpecialChars"):
+            createdLabel.append(labelsSpecial)
+        elif(totalN<=len(labelsMainMenu) and theCurrentSelection[1]=="MultipleLetters"):
+            createdLabel.append(labelsABC)
+        elif(totalN<=len(labelsMainMenu)):
             createdLabel.append(labelsABC)
         if i < len(labelsMainMenu):
             prettyPrintInCamera(theTopFrame, labelsMainMenu[i], centerOfContours[i], color, cv2.LINE_AA)

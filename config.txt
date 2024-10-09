@@ -5,7 +5,7 @@ selectionWaitTime=0.4
 
 #------------------Custom Labels, other languages possible
 labelsABC=ABCDEFGHIJKLMNOPQRSTUVWXYZ
-labelsSpecial=`1234567890~!@#$%^&*()-_+[]\;',./<>?:{}=
+labelsSpecial=`~!@#$%^&*()-_+[]\;',./<>?:{}=
 
 #------------------Custom Labels for Quick Options
 labelsQuick=Yes,No,Not Sure,Food,Bathroom,Hot,Cold,Hurts
