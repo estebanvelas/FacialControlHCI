@@ -17,3 +17,5 @@ fontThickness=1
 #------------------Camera Options
 camSizeX=640
 camSizeY=640
+showFPS=True
+CreateTopText=True

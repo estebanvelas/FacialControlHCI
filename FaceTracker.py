@@ -76,6 +76,8 @@ def GetConfigSettings():
     fontThickness = 1
     camSizeX = 640
     camSizeY = 640
+    showFPS=True
+    CreateTopText=True
     with open(configFilePath, 'r') as file:
         for line in file:
             # Strip whitespace and check if the line starts with #
@@ -106,12 +108,17 @@ def GetConfigSettings():
                 camSizeX = int(value)
             elif key == "camSizeY":
                 camSizeY = int(value)
+            elif key == "showFPS":
+                showFPS = bool(value)
+            elif key == "CreateTopText":
+                CreateTopText = bool(value)
 
     # Print the variables
     print(f"totalOptionsN: {totalOptionsN}, mouseSpeed: {mouseSpeed}, selectionWaitTime: {selectionWaitTime}"
           f", labelsABC: {labelsABC}, labelsQuick: {labelsQuick}, fontScale: {fontScale}"
-          f", fontThickness: {fontThickness}, camSizeX: {camSizeX}, camSizeY: {camSizeY}")
-    return totalOptionsN,mouseSpeed,selectionWaitTime,labelsABC,labelsNumbers,labelsSpecial,labelsQuick,fontScale,fontThickness,camSizeX,camSizeY
+          f", fontThickness: {fontThickness}, camSizeX: {camSizeX}, camSizeY: {camSizeY}"
+          f", showFPS: {showFPS}, createTopText: {CreateTopText}")
+    return totalOptionsN,mouseSpeed,selectionWaitTime,labelsABC,labelsNumbers,labelsSpecial,labelsQuick,fontScale,fontThickness,camSizeX,camSizeY,showFPS,CreateTopText
 
 def GetAreaPoints(totalN,centerOfFaceX,centerOfFaceY,areaSize, rotationAngle):
     #(0,0) being center of face
@@ -477,7 +484,7 @@ def GetSelectionLogic(theSelectionCurrentTime,theCurrentSelection,theSelected,th
 
 
 
-totalOptionsN,mouseSpeed,selectionWaitTime,labelsABC,labelsNumbers,labelsSpecial,labelsQuick,fontScale,fontThickness,camSizeX,camSizeY=GetConfigSettings()
+totalOptionsN,mouseSpeed,selectionWaitTime,labelsABC,labelsNumbers,labelsSpecial,labelsQuick,fontScale,fontThickness,camSizeX,camSizeY,showFPS,CreateTopText=GetConfigSettings()
 
 mpDraw = mp.solutions.drawing_utils
 mpFaceMesh = mp.solutions.face_mesh
