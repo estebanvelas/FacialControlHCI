@@ -6,11 +6,14 @@
 
 
 import math
-
+import re
 import cv2
 import mediapipe as mp
 import time
 import sys
+import requests
+import json
+from llama_cpp import Llama
 
 import numpy as np
 #from numpy.array_api import astype
@@ -18,6 +21,8 @@ import numpy as np
 import pynput
 from pynput.keyboard import Key, Controller as keyController
 from pynput.mouse import Button, Controller as mouseController
+
+import FaceTracker
 
 #Virtual Keyboard
 keyboard = keyController()# Controller()
@@ -46,6 +51,8 @@ labelsMouseMenu=["Click","Back","Double Click","RightClick"]
 labelsMouse=["Down","Left","Up","Right"]
 #------------------
 labelsQuickOptions=["LLM","BackSpace","Back"]
+labelsLLMOptions=["Quick","BackSpace","Back"]
+labelsLMM=["test1","test2","test3","test4","test5",]
 #------------------
 configFilePath='./config.txt'
 
@@ -56,6 +63,10 @@ selectionCurrentTime=0
 currentSelection=[-1,"MainMenu"]#first is option chosen, second is how deep
 selected = -1
 prevSelected = -1
+lastWord="test"
+prevLastWord=" "
+showFPS=False
+showWritten=False
 
 #ui variables
 greenFrameColor = (0, 255, 0)  # BGR
@@ -63,6 +74,36 @@ redFrameColor = (0, 0, 255)  # BGR
 alpha = 0.3
 font=cv2.FONT_HERSHEY_SIMPLEX
 
+
+def loadLLM(thePath,contextSize=512,batchSize=126):
+    theLLM = Llama(model_path="zephyr-7b-beta.Q4_K_M.gguf", n_ctx=contextSize, n_batch=batchSize)
+    return theLLM
+
+def generate_text(
+    prompt="What are the five common emotions?",
+    max_tokens=256,
+    temperature=0.1,
+    top_p=0.5,
+    echo=False,
+    stop=["#"],
+):
+    output = llm(
+        prompt,
+        max_tokens=max_tokens,
+        temperature=temperature,
+        top_p=top_p,
+        echo=echo,
+        stop=stop,
+    )
+    output_text = output["choices"][0]["text"].strip()
+    return output_text
+
+def generate_prompt_from_template(input):
+    chat_prompt_template = f"""<|im_start|>system
+You are a helpful chatbot.<|im_end|>
+<|im_start|>user
+{input}<|im_end|>"""
+    return chat_prompt_template
 
 def GetConfigSettings():
     totalOptionsN = 8
@@ -76,8 +117,11 @@ def GetConfigSettings():
     fontThickness = 1
     camSizeX = 640
     camSizeY = 640
-    showFPS=True
-    CreateTopText=True
+    showFPS =False
+    showWritten=False
+    llmContextSize=512
+    llmBatchSize=126
+
     with open(configFilePath, 'r') as file:
         for line in file:
             # Strip whitespace and check if the line starts with #
@@ -110,15 +154,20 @@ def GetConfigSettings():
                 camSizeY = int(value)
             elif key == "showFPS":
                 showFPS = bool(value)
-            elif key == "CreateTopText":
-                CreateTopText = bool(value)
+            elif key == "showWritten":
+                showWritten = bool(value)
+            elif key == "llmContextSize":
+                llmContextSize = int(value)
+            elif key == "llmBatchSize":
+                llmBatchSize = int(value)
 
     # Print the variables
     print(f"totalOptionsN: {totalOptionsN}, mouseSpeed: {mouseSpeed}, selectionWaitTime: {selectionWaitTime}"
           f", labelsABC: {labelsABC}, labelsQuick: {labelsQuick}, fontScale: {fontScale}"
           f", fontThickness: {fontThickness}, camSizeX: {camSizeX}, camSizeY: {camSizeY}"
-          f", showFPS: {showFPS}, createTopText: {CreateTopText}")
-    return totalOptionsN,mouseSpeed,selectionWaitTime,labelsABC,labelsNumbers,labelsSpecial,labelsQuick,fontScale,fontThickness,camSizeX,camSizeY,showFPS,CreateTopText
+          f", showFPS: {showFPS}, showWritten: {showWritten}"
+          f", llmContextSize: {llmContextSize}, llmBatchSize: {llmBatchSize}")
+    return totalOptionsN,mouseSpeed,selectionWaitTime,labelsABC,labelsNumbers,labelsSpecial,labelsQuick,fontScale,fontThickness,camSizeX,camSizeY, showFPS, showWritten,llmContextSize,llmBatchSize
 
 def GetAreaPoints(totalN,centerOfFaceX,centerOfFaceY,areaSize, rotationAngle):
     #(0,0) being center of face
@@ -204,8 +253,23 @@ def GetGUI(theUIFrame,radiusAsPercent,totalN,centerFaceX,centerFaceY):
 
 
 def GetMenuSystem(theUIFrame, theTopFrame, totalN,theCurrentSelection,theCreatedLabelList):
-    cv2.putText(theTopFrame, "FPS: " + str(int(fps)), org=(int(dimensionsTop[0] / 2), 20),
-                fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=0.5, color=(0, 255, 0), thickness=2)
+    if showFPS:
+        cv2.putText(theTopFrame, "FPS: " + str(int(fps)), org=(int(dimensionsTop[0] / 2), 20),
+                    fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=0.5, color=(0, 255, 0), thickness=2)
+
+    if FaceTracker.lastWord !=FaceTracker.prevLastWord:
+        print("calling LLM: ")
+        startTime = time.time()
+        FaceTracker.prevLastWord=FaceTracker.lastWord
+        llmResponse = prompt=f"Give me a list of only {totalOptionsN-len(labelsLLMOptions)} words with no explanation that go after: \"{lastWord}\""
+        prompt = generate_prompt_from_template(prompt)
+        generatedText=generate_text(prompt)
+        generatedText = re.sub(r'\d+\.?\s*', '', generatedText)
+        print(f"generated Text: {generatedText}")
+        FaceTracker.labelsLMM=generatedText.splitlines()
+        endTime=time.time()
+        print(f"LLM Call took: {endTime-startTime} seconds")
+
     #--------------------------
     # Menu System--------------
     #--------------------------
@@ -224,8 +288,7 @@ def GetMenuSystem(theUIFrame, theTopFrame, totalN,theCurrentSelection,theCreated
             DisplayMouseMenu(labelsMouse, labelsMouseMenu, totalN, theTopFrame)
             theCurrentSelection[0] = -1
         elif (theCurrentSelection[1] == "LLM"):
-            #todo
-            theCurrentSelection = [-1, "MainMenu"]
+            DisplayOtherMenus(labelsLMM,labelsLLMOptions, totalN, theTopFrame)
     else:  # if an option has been chosen
         if(theCurrentSelection[1]=="MainMenu"):
             theCreatedLabelList=GetMainMenu(totalN,theTopFrame,theCurrentSelection)
@@ -358,8 +421,19 @@ def GetMenuSystem(theUIFrame, theTopFrame, totalN,theCurrentSelection,theCreated
                 keyboard.type(" "+labelsQuick[theCurrentSelection[0]-len(labelsQuickOptions)]+" ")
             theCurrentSelection[0] = -1
         elif(theCurrentSelection[1]=="LLM"):
-            #todo
-            theCurrentSelection = [-1, "MainMenu"]
+            DisplayOtherMenus(labelsLMM,labelsLLMOptions, totalN, theTopFrame)
+            if theCurrentSelection[0] == 0:
+                theCurrentSelection = [-1, "Quick"]
+            elif theCurrentSelection[0] == 1:
+                print("pressed: Backspace")
+                keyboard.press(Key.backspace)
+                keyboard.release(Key.backspace)
+            elif theCurrentSelection[0] == 2:
+                theCurrentSelection = [-1, "MainMenu"]
+            elif (theCurrentSelection[0] >= len(labelsQuickOptions)):
+                print("Typed Quick LLM: " + labelsLMM[theCurrentSelection[0] - len(labelsLLMOptions)])
+                keyboard.type(" " + labelsLMM[theCurrentSelection[0] - len(labelsLLMOptions)] + " ")
+                FaceTracker.lastWord=labelsLMM[theCurrentSelection[0] - len(labelsLLMOptions)]
 
     return theCurrentSelection,theCreatedLabelList
 
@@ -484,8 +558,12 @@ def GetSelectionLogic(theSelectionCurrentTime,theCurrentSelection,theSelected,th
 
 
 
-totalOptionsN,mouseSpeed,selectionWaitTime,labelsABC,labelsNumbers,labelsSpecial,labelsQuick,fontScale,fontThickness,camSizeX,camSizeY,showFPS,CreateTopText=GetConfigSettings()
+totalOptionsN,mouseSpeed,selectionWaitTime,\
+labelsABC,labelsNumbers,labelsSpecial,labelsQuick,\
+fontScale,fontThickness,\
+camSizeX,camSizeY,showFPS,showWritten, llmContextSize,llmBatchSize=GetConfigSettings()
 
+llm=loadLLM("zephyr-7b-beta.Q4_K_M.gguf",llmContextSize,llmBatchSize)
 mpDraw = mp.solutions.drawing_utils
 mpFaceMesh = mp.solutions.face_mesh
 faceMesh = mpFaceMesh.FaceMesh(max_num_faces=1)

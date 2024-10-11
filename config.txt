@@ -18,4 +18,8 @@ fontThickness=1
 camSizeX=640
 camSizeY=640
 showFPS=True
-CreateTopText=True
+showWritten=True
+
+#-------512,126-----------LLM Options
+llmContextSize=128
+llmBatchSize=8
