@@ -85,6 +85,7 @@ showFPS =False
 showWritten=False
 llmContextSize=512
 llmBatchSize=126
+llmWaitTime=10
 
 #ui variables
 greenFrameColor = (0, 255, 0)  # BGR
@@ -117,6 +118,21 @@ def generate_text(
     output_text = output["choices"][0]["text"].strip()
     return output_text
 
+def changeLlmWaitTime(theTime):
+    # Read all lines from the file
+    timeLine=f"llmWaitTime={theTime}"
+
+    with open(configFilePath, 'r') as file:
+        lines = file.readlines()
+
+    # Replace the last line if the file is not empty
+    if lines:
+        lines[-1] = timeLine + '\n'  # Add a newline at the end
+
+    # Write the modified lines back to the file
+    with open(configFilePath, 'w') as file:
+        file.writelines(lines)
+
 def generate_prompt_from_template(input):
     chat_prompt_template = f"""<|im_start|>system
 You are a helpful chatbot.<|im_end|>
@@ -140,6 +156,7 @@ def GetConfigSettings():
     showWritten=False
     llmContextSize=512
     llmBatchSize=126
+    llmWaitTime=10
 
     with open(configFilePath, 'r') as file:
         for line in file:
@@ -194,14 +211,17 @@ def GetConfigSettings():
             elif key == "llmBatchSize":
                 llmBatchSize = int(value)
                 FaceTracker.llmBatchSize=llmBatchSize
+            elif key == "llmWaitTime":
+                llmWaitTime = int(value)
+                FaceTracker.llmWaitTime = llmWaitTime
 
     # Print the variables
     print(f"totalOptionsN: {totalOptionsN}, mouseSpeed: {mouseSpeed}, selectionWaitTime: {selectionWaitTime}"
           f", labelsABC: {labelsABC}, labelsQuick: {labelsQuick}, fontScale: {fontScale}"
           f", fontThickness: {fontThickness}, camSizeX: {camSizeX}, camSizeY: {camSizeY}"
           f", showFPS: {showFPS}, showWritten: {showWritten}"
-          f", llmContextSize: {llmContextSize}, llmBatchSize: {llmBatchSize}")
-    return totalOptionsN,mouseSpeed,selectionWaitTime,labelsABC,labelsNumbers,labelsSpecial,labelsQuick,fontScale,fontThickness,camSizeX,camSizeY, showFPS, showWritten,llmContextSize,llmBatchSize
+          f", llmContextSize: {llmContextSize}, llmBatchSize: {llmBatchSize}, llmWaitTime: {llmWaitTime}")
+    return totalOptionsN,mouseSpeed,selectionWaitTime,labelsABC,labelsNumbers,labelsSpecial,labelsQuick,fontScale,fontThickness,camSizeX,camSizeY, showFPS, showWritten,llmContextSize,llmBatchSize,llmWaitTime
 
 def GetAreaPoints(totalN,centerOfFaceX,centerOfFaceY,areaSize, rotationAngle):
     #(0,0) being center of face
@@ -267,6 +287,8 @@ def GetFaceSizeAndCenter(shape,landMarks):
     return faceXmin,faceXmax,faceYmin,faceYmax, centerOfFaceX,centerOfFaceY
 
 
+
+
 def GetGUI(theUIFrame,radiusAsPercent,totalN,centerFaceX,centerFaceY,nosePosition):
     theContours, centerContours = GetAreaPoints(totalN, centerFaceX, centerFaceY,100,360/(totalN*2))  # area number, total areas
     # set center of face
@@ -292,17 +314,22 @@ def GetMenuSystem(theUIFrame, theTopFrame, totalN,theCurrentSelection,theCreated
                     fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=0.5, color=(0, 255, 0), thickness=2)
 
     if FaceTracker.lastWord !=FaceTracker.prevLastWord:
+        FaceTracker.prevLastWord = FaceTracker.lastWord
         print("calling LLM: ")
         startTime = time.time()
-        FaceTracker.prevLastWord=FaceTracker.lastWord
-        llmResponse = prompt=f"Give me a list of only {totalOptionsN-len(labelsLLMOptions)} words with no explanation that go after: \"{lastWord}\""
+        llmResponse = prompt=f"Give me a list of only {totalOptionsN-len(labelsLLMOptions)} words with no explanation that go after: \"{FaceTracker.lastWord}\""
         prompt = generate_prompt_from_template(prompt)
         generatedText=generate_text(FaceTracker.llm,prompt)
         generatedText = re.sub(r'\d+\.?\s*', '', generatedText)
         print(f"generated Text: {generatedText}")
         FaceTracker.labelsLMM=generatedText.splitlines()
+        print(f"generated Text: {FaceTracker.labelsLMM}")
         endTime=time.time()
-        print(f"LLM Call took: {endTime-startTime} seconds")
+        totalTime=math.ceil(endTime-startTime)
+        if totalTime>FaceTracker.llmWaitTime:
+            FaceTracker.llmWaitTime=totalTime
+            changeLlmWaitTime(totalTime)
+        print(f"LLM Call took: {totalTime} seconds")
 
     #--------------------------
     # Menu System--------------
@@ -322,7 +349,7 @@ def GetMenuSystem(theUIFrame, theTopFrame, totalN,theCurrentSelection,theCreated
             DisplayMouseMenu(labelsMouse, labelsMouseMenu, totalN, theTopFrame,centerOfContours,color)
             theCurrentSelection[0] = -1
         elif (theCurrentSelection[1] == "LLM"):
-            DisplayOtherMenus(labelsLMM,labelsLLMOptions, totalN, theTopFrame,centerOfContours,color)
+            DisplayOtherMenus(FaceTracker.labelsLMM,labelsLLMOptions, totalN, theTopFrame,centerOfContours,color)
     else:  # if an option has been chosen
         if(theCurrentSelection[1]=="MainMenu"):
             theCreatedLabelList=GetMainMenu(totalN,theTopFrame,theCurrentSelection,centerOfContours,color,lettersColor)
@@ -411,7 +438,6 @@ def GetMenuSystem(theUIFrame, theTopFrame, totalN,theCurrentSelection,theCreated
             #when selecting the letter menu
             if theCurrentSelection[0]==0:#"Quick", "", ""]
                 theCurrentSelection = [-1, "Quick"]
-                theCurrentSelection[0] = -1
                 print("menu: "+str(labelsMainMenu[theCurrentSelection[0]]))
             elif theCurrentSelection[0] == 1:#BackSpace
                 theCurrentSelection[0] = -1
@@ -468,7 +494,7 @@ def GetMenuSystem(theUIFrame, theTopFrame, totalN,theCurrentSelection,theCreated
                 print("Typed Quick LLM: " + labelsLMM[theCurrentSelection[0] - len(labelsLLMOptions)])
                 keyboard.type(" " + labelsLMM[theCurrentSelection[0] - len(labelsLLMOptions)] + " ")
                 FaceTracker.lastWord=labelsLMM[theCurrentSelection[0] - len(labelsLLMOptions)]
-
+            theCurrentSelection[0] = -1
     return theCurrentSelection,theCreatedLabelList
 
 def DisplayMouseMenu(theLabelsList,theLabelsOptions,totalN,theTopFrame,centerOfContours,color):
@@ -599,7 +625,7 @@ def mainLoop():
     totalOptionsN,mouseSpeed,selectionWaitTime,\
     labelsABC,labelsNumbers,labelsSpecial,labelsQuick,\
     fontScale,fontThickness,\
-    camSizeX,camSizeY,showFPS,showWritten, llmContextSize,llmBatchSize=GetConfigSettings()
+    camSizeX,camSizeY,showFPS,showWritten, llmContextSize,llmBatchSize,llmWaitTime=GetConfigSettings()
 
     FaceTracker.llm=loadLLM("zephyr-7b-beta.Q4_K_M.gguf",llmContextSize,llmBatchSize)
     mpDraw = mp.solutions.drawing_utils

@@ -21,5 +21,8 @@ showFPS=True
 showWritten=True
 
 #-------512,126-----------LLM Options
-llmContextSize=128
+llmContextSize=64
 llmBatchSize=8
+
+#------------------LLM WaitTime
+llmWaitTime=23
