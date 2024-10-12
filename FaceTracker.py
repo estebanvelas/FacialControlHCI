@@ -491,9 +491,9 @@ def GetMenuSystem(theUIFrame, theTopFrame, totalN,theCurrentSelection,theCreated
             elif theCurrentSelection[0] == 2:
                 theCurrentSelection = [-1, "MainMenu"]
             elif (theCurrentSelection[0] >= len(labelsQuickOptions)):
-                print("Typed Quick LLM: " + labelsLMM[theCurrentSelection[0] - len(labelsLLMOptions)])
-                keyboard.type(" " + labelsLMM[theCurrentSelection[0] - len(labelsLLMOptions)] + " ")
-                FaceTracker.lastWord=labelsLMM[theCurrentSelection[0] - len(labelsLLMOptions)]
+                print("Typed Quick LLM: " + FaceTracker.labelsLMM[theCurrentSelection[0] - len(labelsLLMOptions)])
+                keyboard.type(" " + FaceTracker.labelsLMM[theCurrentSelection[0] - len(labelsLLMOptions)] + " ")
+                FaceTracker.lastWord=FaceTracker.labelsLMM[theCurrentSelection[0] - len(labelsLLMOptions)]
             theCurrentSelection[0] = -1
     return theCurrentSelection,theCreatedLabelList
 
