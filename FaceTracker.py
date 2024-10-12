@@ -3,11 +3,10 @@
 #pyinstaller --onefile --windowed --add-data "./config.txt;." --add-data "C:\Users\evelasquez\PycharmProjects\FacialControlHCI\.venv\lib\site-packages\mediapipe;mediapipe/" FaceTracker.py
 #on PC:
 #pyinstaller --onefile --windowed --add-data "./config.txt;." --add-data "C:\Users\velas\PycharmProjects\ballTracker\venv\lib\site-packages\mediapipe;mediapipe/" FaceTracker.py
-import asyncio
 import math
 import re
-import threading
 
+import multiprocessing
 import cv2
 import mediapipe as mp
 import time
@@ -86,6 +85,8 @@ showWritten=False
 llmContextSize=512
 llmBatchSize=126
 llmWaitTime=10
+startTime=0
+llmIsWorkingFlag=False
 
 #ui variables
 greenFrameColor = (0, 255, 0)  # BGR
@@ -95,13 +96,14 @@ font=cv2.FONT_HERSHEY_SIMPLEX
 
 
 def loadLLM(thePath,contextSize=512,batchSize=126):
-    theLLM = Llama(model_path="zephyr-7b-beta.Q4_K_M.gguf", n_ctx=contextSize, n_batch=batchSize)
+
+    theLLM = Llama(model_path="zephyr-7b-beta.Q4_K_M.gguf", n_ctx=contextSize, n_batch=batchSize,use_gpu=True)
     return theLLM
 
 def generate_text(
     llm,
     prompt="What are the five common emotions?",
-    max_tokens=256,
+    max_tokens=24,
     temperature=0.1,
     top_p=0.5,
     echo=False,
@@ -287,8 +289,6 @@ def GetFaceSizeAndCenter(shape,landMarks):
     return faceXmin,faceXmax,faceYmin,faceYmax, centerOfFaceX,centerOfFaceY
 
 
-
-
 def GetGUI(theUIFrame,radiusAsPercent,totalN,centerFaceX,centerFaceY,nosePosition):
     theContours, centerContours = GetAreaPoints(totalN, centerFaceX, centerFaceY,100,360/(totalN*2))  # area number, total areas
     # set center of face
@@ -307,29 +307,54 @@ def GetGUI(theUIFrame,radiusAsPercent,totalN,centerFaceX,centerFaceY,nosePositio
 
     return polyEllipse,theContours,centerContours
 
+def getLLM(queue,llmWaitTime,lastWord):
+    llm = loadLLM("zephyr-7b-beta.Q4_K_M.gguf", llmContextSize, llmBatchSize)
+    #print("calling LLM: ")
 
-def GetMenuSystem(theUIFrame, theTopFrame, totalN,theCurrentSelection,theCreatedLabelList,centerOfContours,color,lettersColor,dimensionsTop):
-    if showFPS:
+    prompt = f"Give me a list of only {totalOptionsN - len(labelsLLMOptions)} words with no explanation that go after: \"{lastWord}\""
+    print(f"prompt: {prompt}")
+    prompt = generate_prompt_from_template(prompt)
+    generatedText = generate_text(llm, prompt)
+    generatedText = re.sub(r'\d+\.?\s*', '', generatedText)
+    print(f"generated Text: {generatedText}")
+    result = generatedText.splitlines()
+    print(f"generated Text: {FaceTracker.labelsLMM}")
+
+    queue.put(result)
+
+def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabelList,centerOfContours,color,lettersColor,dimensionsTop):
+    if FaceTracker.showFPS:
         cv2.putText(theTopFrame, "FPS: " + str(int(fps)), org=(int(dimensionsTop[0] / 2), 20),
                     fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=0.5, color=(0, 255, 0), thickness=2)
+    endTime = time.time()
+    totalTime = math.ceil(endTime - FaceTracker.startTime)
 
     if FaceTracker.lastWord !=FaceTracker.prevLastWord:
         FaceTracker.prevLastWord = FaceTracker.lastWord
-        print("calling LLM: ")
-        startTime = time.time()
-        llmResponse = prompt=f"Give me a list of only {totalOptionsN-len(labelsLLMOptions)} words with no explanation that go after: \"{FaceTracker.lastWord}\""
-        prompt = generate_prompt_from_template(prompt)
-        generatedText=generate_text(FaceTracker.llm,prompt)
-        generatedText = re.sub(r'\d+\.?\s*', '', generatedText)
-        print(f"generated Text: {generatedText}")
-        FaceTracker.labelsLMM=generatedText.splitlines()
-        print(f"generated Text: {FaceTracker.labelsLMM}")
-        endTime=time.time()
-        totalTime=math.ceil(endTime-startTime)
-        if totalTime>FaceTracker.llmWaitTime:
-            FaceTracker.llmWaitTime=totalTime
+        if queue.empty() and not FaceTracker.llmIsWorkingFlag:  # Check if we need to call the slow method
+            FaceTracker.startTime = time.time()
+            llmCall = multiprocessing.Process(target=getLLM, args=(queue,FaceTracker.llmWaitTime,FaceTracker.lastWord,))
+            llmCall.start()
+            FaceTracker.llmIsWorkingFlag= True
+        else:
+            prettyPrintInCamera(theTopFrame,
+                                f"LLM has been called with \"{FaceTracker.lastWord}\", aprox time: {totalTime} seconds out of {FaceTracker.llmWaitTime}",
+                                (int(dimensionsTop[0] / 2), dimensionsTop[1] - 30), color)
+
+    if not queue.empty():
+        FaceTracker.llmIsWorkingFlag = False
+        result = queue.get()
+        print(f"result: {result}")
+        if totalTime > FaceTracker.llmWaitTime:
+            FaceTracker.llmWaitTime = totalTime
             changeLlmWaitTime(totalTime)
         print(f"LLM Call took: {totalTime} seconds")
+        FaceTracker.labelsLMM=result
+
+    if FaceTracker.llmIsWorkingFlag:
+        print(f"LLM has been called with \"{FaceTracker.lastWord}\", aprox time: {totalTime} seconds out of {FaceTracker.llmWaitTime}")
+        prettyPrintInCamera(theTopFrame, f"LLM has been called with \"{FaceTracker.lastWord}\", aprox time: {totalTime} seconds out of {FaceTracker.llmWaitTime}",
+                            (int(dimensionsTop[0] / 2), dimensionsTop[1] - 30), color)
 
     #--------------------------
     # Menu System--------------
@@ -566,8 +591,6 @@ def prettyPrintInCamera(topFrame, text, theOrg, theColor, lineType=cv2.LINE_AA):
 def GetMainMenu(totalN,theTopFrame,theCurrentSelection,centerOfContours,color,lettersColor):
 
     createdLabel = []
-
-
     for i in range(totalN):
         # set option labels on topFrame to make them not transparent
         if (totalN <= len(labelsMainMenu) and theCurrentSelection[1] == "MultipleNumbers"):
@@ -620,14 +643,14 @@ def GetSelectionLogic(theSelectionCurrentTime,theCurrentSelection,theSelected,th
     return theSelected,thePrevSelected,theCurrentSelection,theSelectionCurrentTime
 
 
-def mainLoop():
+def mainLoop(queue):
 
     totalOptionsN,mouseSpeed,selectionWaitTime,\
     labelsABC,labelsNumbers,labelsSpecial,labelsQuick,\
     fontScale,fontThickness,\
     camSizeX,camSizeY,showFPS,showWritten, llmContextSize,llmBatchSize,llmWaitTime=GetConfigSettings()
 
-    FaceTracker.llm=loadLLM("zephyr-7b-beta.Q4_K_M.gguf",llmContextSize,llmBatchSize)
+    #FaceTracker.llm=loadLLM("zephyr-7b-beta.Q4_K_M.gguf",llmContextSize,llmBatchSize)
     mpDraw = mp.solutions.drawing_utils
     mpFaceMesh = mp.solutions.face_mesh
     faceMesh = mpFaceMesh.FaceMesh(max_num_faces=1)
@@ -693,7 +716,7 @@ def mainLoop():
                         # create the n zones for buttons, geometry must be created by placing points in clockwise order
                         # -------------------------
                         ellipsePoly,contours,centerOfContours=GetGUI(uiFrame,radiusAsPercentage,totalOptionsN,centerOfFaceX,centerOfFaceY,nosePosition)
-                        FaceTracker.currentSelection,FaceTracker.createdLabelsList = GetMenuSystem (uiFrame,topFrame,FaceTracker.totalOptionsN,
+                        FaceTracker.currentSelection,FaceTracker.createdLabelsList = GetMenuSystem (queue,topFrame,FaceTracker.totalOptionsN,
                                                                                                     FaceTracker.currentSelection,FaceTracker.createdLabelsList,
                                                                                                     centerOfContours,color,lettersColor,dimensionsTop)
                         # -------------------------
@@ -718,13 +741,7 @@ def mainLoop():
 
 if __name__ == '__main__':
     api_url = 'https://api.example.com/data'  # Replace with your API URL
-
-    # Start the camera feed in a separate thread
-    #camera_thread = threading.Thread(target=show_camera)
-    #camera_thread.start()
-    mainLoop()
-    # Run the async main function for API calls
-    #asyncio.run(main(api_url))
-
-    # Wait for the camera thread to finish
-    #camera_thread.join()
+    queue = multiprocessing.Queue()
+    p = multiprocessing.Process(target=mainLoop, args=(queue,))
+    p.start()
+    p.join()
