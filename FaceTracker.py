@@ -87,6 +87,9 @@ llmBatchSize=126
 llmWaitTime=10
 startTime=0
 llmIsWorkingFlag=False
+whatsWritten=""
+maxWhatsWrittenSize=20
+showWrittenMode="Single"
 
 #ui variables
 greenFrameColor = (0, 255, 0)  # BGR
@@ -159,6 +162,8 @@ def GetConfigSettings():
     llmContextSize=512
     llmBatchSize=126
     llmWaitTime=10
+    maxWhatsWrittenSize=20
+    showWrittenMode="Single"
 
     with open(configFilePath, 'r') as file:
         for line in file:
@@ -220,14 +225,23 @@ def GetConfigSettings():
             elif key == "llmWaitTime":
                 llmWaitTime = int(value)
                 FaceTracker.llmWaitTime = llmWaitTime
+            elif key == "maxWhatsWrittenSize":
+                maxWhatsWrittenSize = int(value)
+                FaceTracker.maxWhatsWrittenSize = maxWhatsWrittenSize
+            elif key == "showWrittenMode":
+                showWrittenMode = value
+                FaceTracker.showWrittenMode = showWrittenMode
+
 
     # Print the variables
     print(f"totalOptionsN: {totalOptionsN}, mouseSpeed: {mouseSpeed}, selectionWaitTime: {selectionWaitTime}"
           f", labelsABC: {labelsABC}, labelsQuick: {labelsQuick}, fontScale: {fontScale}"
           f", fontThickness: {fontThickness}, camSizeX: {camSizeX}, camSizeY: {camSizeY}"
           f", showFPS: {showFPS}, showWritten: {showWritten}"
-          f", llmContextSize: {llmContextSize}, llmBatchSize: {llmBatchSize}, llmWaitTime: {llmWaitTime}")
-    return totalOptionsN,mouseSpeed,selectionWaitTime,labelsABC,labelsNumbers,labelsSpecial,labelsQuick,fontScale,fontThickness,camSizeX,camSizeY, showFPS, showWritten,llmContextSize,llmBatchSize,llmWaitTime
+          f", llmContextSize: {llmContextSize}, llmBatchSize: {llmBatchSize}, llmWaitTime: {llmWaitTime}"
+          f", maxWhatsWrittenSize: {maxWhatsWrittenSize}, showWrittenMode: {showWrittenMode}")
+    return totalOptionsN,mouseSpeed,selectionWaitTime,labelsABC,labelsNumbers,labelsSpecial,labelsQuick,fontScale\
+        ,fontThickness,camSizeX,camSizeY, showFPS, showWritten,llmContextSize,llmBatchSize,llmWaitTime,maxWhatsWrittenSize,showWrittenMode
 
 def GetAreaPoints(totalN,centerOfFaceX,centerOfFaceY,areaSize, rotationAngle):
     #(0,0) being center of face
@@ -314,17 +328,33 @@ def GetGUI(theUIFrame,radiusAsPercent,totalN,centerFaceX,centerFaceY,nosePositio
 def getLLM(queue,llmWaitTime,lastWord):
     llm = loadLLM("zephyr-7b-beta.Q4_K_M.gguf", llmContextSize, llmBatchSize)
     #print("calling LLM: ")
-
     prompt = f"Give me a list of only {totalOptionsN - len(labelsLLMOptions)} words with no explanation that go after: \"{lastWord}\""
-    print(f"prompt: {prompt}")
+    #print(f"prompt: {prompt}")
     prompt = generate_prompt_from_template(prompt)
     generatedText = generate_text(llm, prompt)
     generatedText = re.sub(r'\d+\.?\s*', '', generatedText)
-    print(f"generated Text: {generatedText}")
+    #print(f"generated Text: {generatedText}")
     result = generatedText.splitlines()
-    print(f"generated Text: {FaceTracker.labelsLMM}")
-
+    #print(f"generated Text: {FaceTracker.labelsLMM}")
     queue.put(result)
+
+def showWhatsWritten(theTopFrame,dimensionsTop):
+    #show up until max numbers of characters
+    if len(FaceTracker.whatsWritten)>FaceTracker.maxWhatsWrittenSize:
+        FaceTracker.whatsWritten=FaceTracker.whatsWritten[-FaceTracker.maxWhatsWrittenSize:]
+    #start options
+    if FaceTracker.showWrittenMode=="CloneAndMirror":
+        #original viewing for reference
+        FaceTracker.prettyPrintInCamera(theTopFrame, FaceTracker.whatsWritten, (int(20), 20),
+                                        FaceTracker.redFrameColor, onCenter=True)  # x and y are inverted in call
+    #mirror
+    elif FaceTracker.showWrittenMode=="Mirror":
+        FaceTracker.prettyPrintInCamera(theTopFrame, FaceTracker.whatsWritten, (int(dimensionsTop[1] / 2), 20),
+                                        FaceTracker.redFrameColor, onCenter=True)  # x and y are inverted in call
+    else:
+        FaceTracker.prettyPrintInCamera(theTopFrame, FaceTracker.whatsWritten, (int(dimensionsTop[1] / 2), 20),
+                                        FaceTracker.redFrameColor, onCenter=True)  # x and y are inverted in call
+
 
 def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabelList,centerOfContours,color,lettersColor,dimensionsTop):
     if FaceTracker.showFPS:
@@ -352,13 +382,16 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
         if totalTime > FaceTracker.llmWaitTime:
             FaceTracker.llmWaitTime = totalTime
             changeLlmWaitTime(totalTime)
-        print(f"LLM Call took: {totalTime} seconds")
+        #print(f"LLM Call took: {totalTime} seconds")
         FaceTracker.labelsLMM=result
 
     if FaceTracker.llmIsWorkingFlag:
         warningText=f"LLM: \"{FaceTracker.lastWord}\",aprox {int(totalTime/FaceTracker.llmWaitTime*100)}% done, {int(FaceTracker.llmWaitTime-totalTime)} seconds left"
         #print(dimensionsTop)
         FaceTracker.prettyPrintInCamera(theTopFrame, warningText,(int(dimensionsTop[1] / 2),dimensionsTop[0]-30 ), FaceTracker.redFrameColor,onCenter=True)#x and y are inverted in call
+
+    if FaceTracker.showWritten:
+        showWhatsWritten(theTopFrame,dimensionsTop)
 
     #--------------------------
     # Menu System--------------
@@ -391,6 +424,8 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
                 print("pressed: Backspace")
                 keyboard.press(Key.backspace)
                 keyboard.release(Key.backspace)
+                if len(FaceTracker.whatsWritten)>0:
+                    FaceTracker.whatsWritten = FaceTracker.whatsWritten[:-1]
             elif theCurrentSelection[0]==2:#LLM
                 print(f"Menu: {str(labelsMainMenu[theCurrentSelection[0]])}, selection: {theCurrentSelection[0]}")
                 theCurrentSelection = [-1, "LLM"]
@@ -399,6 +434,7 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
                 print("pressed: Space")
                 keyboard.press(Key.space)
                 keyboard.release(Key.space)
+                FaceTracker.whatsWritten = FaceTracker.whatsWritten+" "
             elif theCurrentSelection[0] == 4:#Mouse Control
                 theCurrentSelection = [-1, "MouseControl"]
                 print("menu: " + str(labelsMainMenu[theCurrentSelection[0]]))
@@ -473,6 +509,8 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
                 print("pressed: Backspace")
                 keyboard.press(Key.backspace)
                 keyboard.release(Key.backspace)
+                if len(FaceTracker.whatsWritten)>0:
+                    FaceTracker.whatsWritten = FaceTracker.whatsWritten[:-1]
             elif theCurrentSelection[0] == 2:#Back
                 theCurrentSelection = [-1,"MainMenu"]
             #when selecting a letter or group of letters
@@ -484,9 +522,11 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
                 if (str(theCreatedLabelList[theCurrentSelection[0] - len(labelsLettersMenu)]))=='_':
                     keyboard.press(Key.space)
                     keyboard.release(Key.space)
+                    FaceTracker.whatsWritten = FaceTracker.whatsWritten + " "
                 else:
                     keyboard.press(str(theCreatedLabelList[theCurrentSelection[0] - len(labelsLettersMenu)]))
                     keyboard.release(str(theCreatedLabelList[theCurrentSelection[0] - len(labelsLettersMenu)]))
+                    FaceTracker.whatsWritten = FaceTracker.whatsWritten + str(theCreatedLabelList[theCurrentSelection[0] - len(labelsLettersMenu)])
             elif (sizeOfLabelText>1):
                 selectedFromListIndex=theCurrentSelection[0] - len(labelsLettersMenu)
                 if(selectedFromListIndex<0):
@@ -503,11 +543,14 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
                 print("pressed: Backspace")
                 keyboard.press(Key.backspace)
                 keyboard.release(Key.backspace)
+                if len(FaceTracker.whatsWritten)>0:
+                    FaceTracker.whatsWritten = FaceTracker.whatsWritten[:-1]
             elif theCurrentSelection[0] == 2:
                 theCurrentSelection = [-1, "MainMenu"]
             elif(theCurrentSelection[0]>=len(labelsQuickOptions)):
                 print("Typed Quick: "+labelsQuick[theCurrentSelection[0]-len(labelsQuickOptions)])
                 keyboard.type(" "+labelsQuick[theCurrentSelection[0]-len(labelsQuickOptions)]+" ")
+                FaceTracker.whatsWritten = FaceTracker.whatsWritten + " "+labelsQuick[theCurrentSelection[0]-len(labelsQuickOptions)]+" "
             theCurrentSelection[0] = -1
         elif(theCurrentSelection[1]=="LLM"):
             DisplayOtherMenus(labelsLMM,labelsLLMOptions, totalN, theTopFrame,centerOfContours,color)
@@ -517,11 +560,14 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
                 print("pressed: Backspace")
                 keyboard.press(Key.backspace)
                 keyboard.release(Key.backspace)
+                if len(FaceTracker.whatsWritten)>0:
+                    FaceTracker.whatsWritten = FaceTracker.whatsWritten[:-1]
             elif theCurrentSelection[0] == 2:
                 theCurrentSelection = [-1, "MainMenu"]
             elif (theCurrentSelection[0] >= len(labelsQuickOptions)):
                 print("Typed Quick LLM: " + FaceTracker.labelsLMM[theCurrentSelection[0] - len(labelsLLMOptions)])
                 keyboard.type(" " + FaceTracker.labelsLMM[theCurrentSelection[0] - len(labelsLLMOptions)] + " ")
+                FaceTracker.whatsWritten = FaceTracker.whatsWritten + " " + FaceTracker.labelsLMM[theCurrentSelection[0] - len(labelsLLMOptions)] + " "
                 FaceTracker.lastWord=FaceTracker.labelsLMM[theCurrentSelection[0] - len(labelsLLMOptions)]
             theCurrentSelection[0] = -1
     return theCurrentSelection,theCreatedLabelList
@@ -658,7 +704,7 @@ def mainLoop(queue):
     totalOptionsN,mouseSpeed,selectionWaitTime,\
     labelsABC,labelsNumbers,labelsSpecial,labelsQuick,\
     fontScale,fontThickness,\
-    camSizeX,camSizeY,showFPS,showWritten, llmContextSize,llmBatchSize,llmWaitTime=GetConfigSettings()
+    camSizeX,camSizeY,showFPS,showWritten, llmContextSize,llmBatchSize,llmWaitTime,maxWhatsWrittenSize,showWrittenMode=GetConfigSettings()
 
     #FaceTracker.llm=loadLLM("zephyr-7b-beta.Q4_K_M.gguf",llmContextSize,llmBatchSize)
     mpDraw = mp.solutions.drawing_utils
