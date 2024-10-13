@@ -1,8 +1,8 @@
 #To Deploy exe:
 #on laptop:
-#pyinstaller --onefile --windowed --add-data "./config.txt;." --add-data "C:\Users\evelasquez\PycharmProjects\FacialControlHCI\.venv\lib\site-packages\mediapipe;mediapipe/" FaceTracker.py
+#pyinstaller --name FacialControlHMI --onefile --windowed --additional-hooks-dir=./hooks entry-point.py --add-data "./config.txt;." --add-data "C:\Users\evelasquez\PycharmProjects\FacialControlHCI\.venv\lib\site-packages\mediapipe;mediapipe/" FaceTracker.py
 #on PC:
-#pyinstaller --onefile --windowed --add-data "./config.txt;." --add-data "C:\Users\velas\PycharmProjects\ballTracker\venv\lib\site-packages\mediapipe;mediapipe/" FaceTracker.py
+#pyinstaller --onefile --windowed --additional-hooks-dir="./hooks entry-point.py" --add-data "./config.txt;." --add-data "C:\Users\velas\PycharmProjects\ballTracker\venv\lib\site-packages\mediapipe;mediapipe/" FaceTracker.py
 import math
 import re
 
