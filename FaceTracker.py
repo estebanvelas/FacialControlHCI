@@ -202,9 +202,13 @@ def GetConfigSettings():
                 camSizeY = int(value)
                 FaceTracker.camSizeY=camSizeY
             elif key == "showFPS":
+                if value == "False" or value == "False" or value == "0":
+                    value=""
                 showFPS = bool(value)
                 FaceTracker.showFPS=showFPS
             elif key == "showWritten":
+                if value == "False" or value == "false" or value == "0"or value == "f" or value == "F":
+                    value=""
                 showWritten = bool(value)
                 FaceTracker.showWritten=showWritten
             elif key == "llmContextSize":
@@ -337,9 +341,9 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
             llmCall.start()
             FaceTracker.llmIsWorkingFlag= True
         else:
-            prettyPrintInCamera(theTopFrame,
+            FaceTracker.prettyPrintInCamera(theTopFrame,
                                 f"LLM has been called with \"{FaceTracker.lastWord}\", aprox time: {totalTime} seconds out of {FaceTracker.llmWaitTime}",
-                                (int(dimensionsTop[0] / 2), dimensionsTop[1] - 30), color)
+                                (int(dimensionsTop[0] / 2), 20), color)
 
     if not queue.empty():
         FaceTracker.llmIsWorkingFlag = False
@@ -352,9 +356,9 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
         FaceTracker.labelsLMM=result
 
     if FaceTracker.llmIsWorkingFlag:
-        print(f"LLM has been called with \"{FaceTracker.lastWord}\", aprox time: {totalTime} seconds out of {FaceTracker.llmWaitTime}")
-        prettyPrintInCamera(theTopFrame, f"LLM has been called with \"{FaceTracker.lastWord}\", aprox time: {totalTime} seconds out of {FaceTracker.llmWaitTime}",
-                            (int(dimensionsTop[0] / 2), dimensionsTop[1] - 30), color)
+        warningText=f"LLM: \"{FaceTracker.lastWord}\",aprox {int(totalTime/FaceTracker.llmWaitTime*100)}% done, {int(FaceTracker.llmWaitTime-totalTime)} seconds left"
+        #print(dimensionsTop)
+        FaceTracker.prettyPrintInCamera(theTopFrame, warningText,(int(dimensionsTop[1] / 2),dimensionsTop[0]-30 ), FaceTracker.redFrameColor,onCenter=True)#x and y are inverted in call
 
     #--------------------------
     # Menu System--------------
@@ -575,7 +579,7 @@ def GetCharacterDivisionMenu(theLabelsList, totalN, theTopFrame, theCurrentSelec
                 #print(f"createdLabel: {createdLabel}")
     return createdLabel,theCurrentSelection
 
-def prettyPrintInCamera(topFrame, text, theOrg, theColor, lineType=cv2.LINE_AA):
+def prettyPrintInCamera(topFrame, text, theOrg, theColor, lineType=cv2.LINE_AA, onCenter=False):
     text_size = cv2.getTextSize(text, font, fontScale, fontThickness)[0]
     paddingPercentage=.1
     proportionalPadding=[math.floor(text_size[0]*paddingPercentage),math.floor(text_size[1]*paddingPercentage)]
@@ -584,8 +588,14 @@ def prettyPrintInCamera(topFrame, text, theOrg, theColor, lineType=cv2.LINE_AA):
     background_y1 = theOrg[1] - text_size[1] - proportionalPadding[1]
     background_x2 = theOrg[0] + text_size[0] + proportionalPadding[0]
     background_y2 = theOrg[1] + proportionalPadding[1]
-    cv2.rectangle(topFrame, (background_x1, background_y1), (background_x2, background_y2), (255, 255, 255), -1)
-    cv2.putText(topFrame, text, theOrg, font, fontScale, theColor, fontThickness,lineType)
+    if onCenter:
+        pixelsToSubstract = (math.floor(text_size[0]/2),math.floor(text_size[1]/2))
+        cv2.rectangle(topFrame, (background_x1-pixelsToSubstract[0], background_y1-pixelsToSubstract[1]),
+                      (background_x2-pixelsToSubstract[0], background_y2-pixelsToSubstract[1]), (255, 255, 255), -1)
+        cv2.putText(topFrame, text, (theOrg[0]-pixelsToSubstract[0],theOrg[1]-pixelsToSubstract[1]), font, fontScale, theColor, fontThickness, lineType)
+    else:
+        cv2.rectangle(topFrame, (background_x1, background_y1), (background_x2, background_y2), (255, 255, 255), -1)
+        cv2.putText(topFrame, text, theOrg, font, fontScale, theColor, fontThickness,lineType)
 
 
 def GetMainMenu(totalN,theTopFrame,theCurrentSelection,centerOfContours,color,lettersColor):
@@ -741,6 +751,7 @@ def mainLoop(queue):
 
 if __name__ == '__main__':
     api_url = 'https://api.example.com/data'  # Replace with your API URL
+    FaceTracker.llmIsWorkingFlag=True
     queue = multiprocessing.Queue()
     p = multiprocessing.Process(target=mainLoop, args=(queue,))
     p.start()

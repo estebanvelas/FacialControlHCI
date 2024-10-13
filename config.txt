@@ -17,7 +17,7 @@ fontThickness=1
 #------------------Camera Options
 camSizeX=640
 camSizeY=640
-showFPS=True
+showFPS=False
 showWritten=True
 
 #-------512,126-----------LLM Options
@@ -25,4 +25,4 @@ llmContextSize=32
 llmBatchSize=32
 
 #------------------LLM WaitTime
-llmWaitTime=0
+llmWaitTime=20
