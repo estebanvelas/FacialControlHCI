@@ -63,7 +63,7 @@ selectionCurrentTime=0
 currentSelection=[-1,"MainMenu"]#first is option chosen, second is how deep
 selected = -1
 prevSelected = -1
-lastWord="test"
+lastWord=""
 prevLastWord=" "
 showFPS=False
 showWritten=False
@@ -343,17 +343,45 @@ def showWhatsWritten(theTopFrame,dimensionsTop):
     if len(FaceTracker.whatsWritten)>FaceTracker.maxWhatsWrittenSize:
         FaceTracker.whatsWritten=FaceTracker.whatsWritten[-FaceTracker.maxWhatsWrittenSize:]
     #start options
-    if FaceTracker.showWrittenMode=="CloneAndMirror":
-        #original viewing for reference
-        FaceTracker.prettyPrintInCamera(theTopFrame, FaceTracker.whatsWritten, (int(20), 20),
-                                        FaceTracker.redFrameColor, onCenter=True)  # x and y are inverted in call
-    #mirror
-    elif FaceTracker.showWrittenMode=="Mirror":
-        FaceTracker.prettyPrintInCamera(theTopFrame, FaceTracker.whatsWritten, (int(dimensionsTop[1] / 2), 20),
-                                        FaceTracker.redFrameColor, onCenter=True)  # x and y are inverted in call
+    if "mirror" in FaceTracker.showWrittenMode.lower():
+        percentageTakenByWritten = .1
+        top_height = int(dimensionsTop[0] * percentageTakenByWritten)
+        # splitIntoHalves
+        top_half = theTopFrame[:top_height, :]
+        bottom_half = theTopFrame[top_height:, :]
+        topHalfSize = top_half.shape
+        #put black background
+        top_half = np.zeros((topHalfSize[0], topHalfSize[1], 3), dtype=np.uint8)
+
+        if FaceTracker.showWrittenMode=="CloneAndMirror":
+            left_half = top_half[:, :topHalfSize[1] // 2]  # Left half
+            right_half = top_half[:, topHalfSize[1] // 2:]  # Right half
+            sideHalfSize = left_half.shape
+            # put white text on black background
+            (text_width, text_height), baseline = cv2.getTextSize(FaceTracker.whatsWritten, FaceTracker.font,
+                                                                  FaceTracker.fontScale, FaceTracker.fontThickness)
+            cv2.putText(right_half, FaceTracker.whatsWritten,
+                        (int((sideHalfSize[1] / 2) - text_width / 2), text_height + 20), FaceTracker.font,
+                        FaceTracker.fontScale, (255, 255, 255), FaceTracker.fontThickness, cv2.LINE_AA)
+            cv2.putText(left_half, FaceTracker.whatsWritten,
+                        (int((sideHalfSize[1] / 2) - text_width / 2), text_height + 20), FaceTracker.font,
+                        FaceTracker.fontScale, (255, 255, 255), FaceTracker.fontThickness, cv2.LINE_AA)
+            # Create a mirrored version of the image
+            mirrored_right_half = cv2.flip(right_half, 1)
+            combined_TopHalf = cv2.hconcat([left_half, mirrored_right_half])
+            theTopFrame = cv2.vconcat([combined_TopHalf, bottom_half])
+        #mirror
+        else:
+            #put white text on black background
+            (text_width, text_height), baseline = cv2.getTextSize(FaceTracker.whatsWritten, FaceTracker.font, FaceTracker.fontScale,FaceTracker.fontThickness)
+            cv2.putText(top_half, FaceTracker.whatsWritten, (int((dimensionsTop[1] / 2)-text_width/2), text_height+20), FaceTracker.font, FaceTracker.fontScale, (255, 255, 255), FaceTracker.fontThickness, cv2.LINE_AA)
+            # Create a mirrored version of the image
+            mirrored_top_half = cv2.flip(top_half, 1)
+            theTopFrame = cv2.vconcat([mirrored_top_half, bottom_half])
     else:
         FaceTracker.prettyPrintInCamera(theTopFrame, FaceTracker.whatsWritten, (int(dimensionsTop[1] / 2), 20),
                                         FaceTracker.redFrameColor, onCenter=True)  # x and y are inverted in call
+    return theTopFrame
 
 
 def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabelList,centerOfContours,color,lettersColor,dimensionsTop):
@@ -391,7 +419,7 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
         FaceTracker.prettyPrintInCamera(theTopFrame, warningText,(int(dimensionsTop[1] / 2),dimensionsTop[0]-30 ), FaceTracker.redFrameColor,onCenter=True)#x and y are inverted in call
 
     if FaceTracker.showWritten:
-        showWhatsWritten(theTopFrame,dimensionsTop)
+        theTopFrame = showWhatsWritten(theTopFrame,dimensionsTop)
 
     #--------------------------
     # Menu System--------------
@@ -570,7 +598,7 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
                 FaceTracker.whatsWritten = FaceTracker.whatsWritten + " " + FaceTracker.labelsLMM[theCurrentSelection[0] - len(labelsLLMOptions)] + " "
                 FaceTracker.lastWord=FaceTracker.labelsLMM[theCurrentSelection[0] - len(labelsLLMOptions)]
             theCurrentSelection[0] = -1
-    return theCurrentSelection,theCreatedLabelList
+    return theCurrentSelection,theCreatedLabelList, theTopFrame
 
 def DisplayMouseMenu(theLabelsList,theLabelsOptions,totalN,theTopFrame,centerOfContours,color):
     for i in range(totalN):
@@ -642,6 +670,7 @@ def prettyPrintInCamera(topFrame, text, theOrg, theColor, lineType=cv2.LINE_AA, 
     else:
         cv2.rectangle(topFrame, (background_x1, background_y1), (background_x2, background_y2), (255, 255, 255), -1)
         cv2.putText(topFrame, text, theOrg, font, fontScale, theColor, fontThickness,lineType)
+    return text_size
 
 
 def GetMainMenu(totalN,theTopFrame,theCurrentSelection,centerOfContours,color,lettersColor):
@@ -772,7 +801,7 @@ def mainLoop(queue):
                         # create the n zones for buttons, geometry must be created by placing points in clockwise order
                         # -------------------------
                         ellipsePoly,contours,centerOfContours=GetGUI(uiFrame,radiusAsPercentage,totalOptionsN,centerOfFaceX,centerOfFaceY,nosePosition)
-                        FaceTracker.currentSelection,FaceTracker.createdLabelsList = GetMenuSystem (queue,topFrame,FaceTracker.totalOptionsN,
+                        FaceTracker.currentSelection,FaceTracker.createdLabelsList,topFrame = GetMenuSystem (queue,topFrame,FaceTracker.totalOptionsN,
                                                                                                     FaceTracker.currentSelection,FaceTracker.createdLabelsList,
                                                                                                     centerOfContours,color,lettersColor,dimensionsTop)
                         # -------------------------
