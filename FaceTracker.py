@@ -1,9 +1,5 @@
-#To Deploy exe:
-#on laptop:
-#pyinstaller --name FacialControlHMI --onefile --windowed --additional-hooks-dir=./hooks entry-point.py --add-data "./config.txt;." --add-data "C:\Users\evelasquez\PycharmProjects\FacialControlHCI\.venv\lib\site-packages\mediapipe;mediapipe/" FaceTracker.py
-#on PC:
-#pyinstaller --onefile --windowed --additional-hooks-dir="./hooks entry-point.py" --add-data "./config.txt;." --add-data "C:\Users\velas\PycharmProjects\ballTracker\venv\lib\site-packages\mediapipe;mediapipe/" FaceTracker.py
 import math
+import os
 import re
 
 import multiprocessing
@@ -11,10 +7,9 @@ import cv2
 import mediapipe as mp
 import time
 import sys
-import requests
 import json
 from llama_cpp import Llama
-
+from openai import OpenAI
 import numpy as np
 #from numpy.array_api import astype
 
@@ -90,6 +85,9 @@ llmIsWorkingFlag=False
 whatsWritten=""
 maxWhatsWrittenSize=20
 showWrittenMode="Single"
+seedWord="Emotions"
+LlmService="Local"
+LlmKey=""
 
 #ui variables
 greenFrameColor = (0, 255, 0)  # BGR
@@ -164,6 +162,9 @@ def GetConfigSettings():
     llmWaitTime=10
     maxWhatsWrittenSize=20
     showWrittenMode="Single"
+    seedWord="Emotions"
+    LlmService="local"
+    LlmKey=""
 
     with open(configFilePath, 'r') as file:
         for line in file:
@@ -231,6 +232,15 @@ def GetConfigSettings():
             elif key == "showWrittenMode":
                 showWrittenMode = value
                 FaceTracker.showWrittenMode = showWrittenMode
+            elif key == "SeedWord":
+                SeedWord = value
+                FaceTracker.SeedWord = SeedWord
+            elif key == "LlmService":
+                LlmService = value
+                FaceTracker.LlmService = LlmService
+            elif key == "LlmKey":
+                LlmKey = value
+                FaceTracker.LlmKey = LlmKey
 
 
     # Print the variables
@@ -239,9 +249,11 @@ def GetConfigSettings():
           f", fontThickness: {fontThickness}, camSizeX: {camSizeX}, camSizeY: {camSizeY}"
           f", showFPS: {showFPS}, showWritten: {showWritten}"
           f", llmContextSize: {llmContextSize}, llmBatchSize: {llmBatchSize}, llmWaitTime: {llmWaitTime}"
-          f", maxWhatsWrittenSize: {maxWhatsWrittenSize}, showWrittenMode: {showWrittenMode}")
-    return totalOptionsN,mouseSpeed,selectionWaitTime,labelsABC,labelsNumbers,labelsSpecial,labelsQuick,fontScale\
-        ,fontThickness,camSizeX,camSizeY, showFPS, showWritten,llmContextSize,llmBatchSize,llmWaitTime,maxWhatsWrittenSize,showWrittenMode
+          f", maxWhatsWrittenSize: {maxWhatsWrittenSize}, showWrittenMode: {showWrittenMode}"
+          f", seedWord: {seedWord}, LlmService: {LlmService}, LlmKey: {LlmKey}")
+    return (totalOptionsN,mouseSpeed,selectionWaitTime,labelsABC,labelsNumbers,labelsSpecial,labelsQuick,fontScale\
+        ,fontThickness,camSizeX,camSizeY, showFPS, showWritten,llmContextSize,llmBatchSize,llmWaitTime
+            ,maxWhatsWrittenSize,showWrittenMode,seedWord,LlmService,LlmKey)
 
 def GetAreaPoints(totalN,centerOfFaceX,centerOfFaceY,areaSize, rotationAngle):
     #(0,0) being center of face
@@ -325,17 +337,35 @@ def GetGUI(theUIFrame,radiusAsPercent,totalN,centerFaceX,centerFaceY,nosePositio
 
     return polyEllipse,theContours,centerContours
 
-def getLLM(queue,llmWaitTime,lastWord):
-    llm = loadLLM("zephyr-7b-beta.Q4_K_M.gguf", llmContextSize, llmBatchSize)
-    #print("calling LLM: ")
-    prompt = f"Give me a list of only {totalOptionsN - len(labelsLLMOptions)} words with no explanation that go after: \"{lastWord}\""
-    #print(f"prompt: {prompt}")
-    prompt = generate_prompt_from_template(prompt)
-    generatedText = generate_text(llm, prompt)
-    generatedText = re.sub(r'\d+\.?\s*', '', generatedText)
-    #print(f"generated Text: {generatedText}")
-    result = generatedText.splitlines()
-    #print(f"generated Text: {FaceTracker.labelsLMM}")
+def getLLM(queue,LlmService,LlmKey,lastWord):
+    if lastWord is None or lastWord == "":
+        prompt = f"Give me a list of only {totalOptionsN - len(labelsLLMOptions)} words with no explanation that go after: \"{FaceTracker.seedWord}\""
+    else:
+        prompt = f"Give me a list of only {totalOptionsN - len(labelsLLMOptions)} words with no explanation that go after: \"{lastWord}\""
+    # print(f"prompt: {prompt}")
+
+    if LlmService=="ChatGPT":
+        #print("Calling ChatGPT: ")
+        client = OpenAI(api_key=LlmKey)
+        session = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[{
+                "role": "user",
+                "content": prompt
+            }]
+        )
+        response = session.choices[0].message.content
+        reply = re.sub(r'\d+\.?\s*', '', response)
+        result=reply.splitlines()
+    else:
+        prompt = generate_prompt_from_template(prompt)
+        print("calling local LLM: ")
+        llm = loadLLM("zephyr-7b-beta.Q4_K_M.gguf", llmContextSize, llmBatchSize)
+        generatedText = generate_text(llm, prompt)
+        generatedText = re.sub(r'\d+\.?\s*', '', generatedText)
+        #print(f"generated Text: {generatedText}")
+        result = generatedText.splitlines()
+        #print(f"generated Text: {FaceTracker.labelsLMM}")
     queue.put(result)
 
 def showWhatsWritten(theTopFrame,dimensionsTop):
@@ -395,7 +425,7 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
         FaceTracker.prevLastWord = FaceTracker.lastWord
         if queue.empty() and not FaceTracker.llmIsWorkingFlag:  # Check if we need to call the slow method
             FaceTracker.startTime = time.time()
-            llmCall = multiprocessing.Process(target=getLLM, args=(queue,FaceTracker.llmWaitTime,FaceTracker.lastWord,))
+            llmCall = multiprocessing.Process(target=getLLM, args=(queue,FaceTracker.LlmService,FaceTracker.LlmKey,FaceTracker.lastWord,))
             llmCall.start()
             FaceTracker.llmIsWorkingFlag= True
         else:
@@ -414,6 +444,8 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
         FaceTracker.labelsLMM=result
 
     if FaceTracker.llmIsWorkingFlag:
+        if FaceTracker.llmWaitTime<=0:
+            FaceTracker.llmWaitTime=1
         warningText=f"LLM: \"{FaceTracker.lastWord}\",aprox {int(totalTime/FaceTracker.llmWaitTime*100)}% done, {int(FaceTracker.llmWaitTime-totalTime)} seconds left"
         #print(dimensionsTop)
         FaceTracker.prettyPrintInCamera(theTopFrame, warningText,(int(dimensionsTop[1] / 2),dimensionsTop[0]-30 ), FaceTracker.redFrameColor,onCenter=True)#x and y are inverted in call
@@ -730,10 +762,11 @@ def GetSelectionLogic(theSelectionCurrentTime,theCurrentSelection,theSelected,th
 
 def mainLoop(queue):
 
-    totalOptionsN,mouseSpeed,selectionWaitTime,\
+    (totalOptionsN,mouseSpeed,selectionWaitTime,\
     labelsABC,labelsNumbers,labelsSpecial,labelsQuick,\
     fontScale,fontThickness,\
-    camSizeX,camSizeY,showFPS,showWritten, llmContextSize,llmBatchSize,llmWaitTime,maxWhatsWrittenSize,showWrittenMode=GetConfigSettings()
+    camSizeX,camSizeY,showFPS,showWritten, llmContextSize,llmBatchSize,llmWaitTime,
+     maxWhatsWrittenSize,showWrittenMode,seedWord,LlmService,LlmKey)=GetConfigSettings()
 
     #FaceTracker.llm=loadLLM("zephyr-7b-beta.Q4_K_M.gguf",llmContextSize,llmBatchSize)
     mpDraw = mp.solutions.drawing_utils
@@ -749,8 +782,8 @@ def mainLoop(queue):
         #print("SourceTop: "+str(sourceTop)+", sourceSide: "+str(sourceSide))
         cameraTopView = cv2.VideoCapture(sourceTop)
         # cameraTopView.set(cv2.CAP_PROP_FPS, 30.0)
-        cameraTopView.set(cv2.CAP_PROP_FRAME_WIDTH, 640);#640
-        cameraTopView.set(cv2.CAP_PROP_FRAME_HEIGHT, 640);#480
+        cameraTopView.set(cv2.CAP_PROP_FRAME_WIDTH, camSizeX);#640
+        cameraTopView.set(cv2.CAP_PROP_FRAME_HEIGHT, camSizeY);#480
     else:
         cameraTopView = cv2.imread("testImages/Sofa2.jpg")
 
@@ -822,7 +855,7 @@ def mainLoop(queue):
         #cv2.imshow("top frame", topFrame)
         combinedCalibImage = topFrame.copy()
         uiFrame = cv2.addWeighted(uiFrame, alpha, combinedCalibImage, 1 - alpha, 0)
-        cv2.imshow("UIframe", uiFrame)
+        cv2.imshow("Facial Control HMI", uiFrame)
 
 if __name__ == '__main__':
     api_url = 'https://api.example.com/data'  # Replace with your API URL

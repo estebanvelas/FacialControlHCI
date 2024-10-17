@@ -16,16 +16,20 @@ fontThickness=1
 
 #------------------Camera Options
 camSizeX=640
-camSizeY=640
+camSizeY=480
 showFPS=False
 #------------------UI Options. For showWrittenMode: Single, Mirror and CloneAndMirror
 showWritten=True
 maxWhatsWrittenSize=30
 showWrittenMode=CloneAndMirror
-#-------512,126-----------LLM Options
+
+#------------------LLM Config
+llmWaitTime=1
+SeedWord=Hello
+LlmService=ChatGPT
+LlmKey=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
+
+#-------512,126-----------Local LLM Options
 llmContextSize=32
 llmBatchSize=32
-
-#------------------LLM WaitTime
-llmWaitTime=20
-
+llmWaitTime=8

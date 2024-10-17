@@ -1,0 +1,15 @@
+#To Deploy exe:
+HuggingFace models:
+https://huggingface.co/TheBloke/zephyr-7B-beta-GGUF
+
+with CUDA:
+set CMAKE_ARGS=-DLLAMA_CUBLAS=on
+set FORCE_CMAKE=1
+pip install llama-cpp-python
+without CUDA:
+pip install llama-cpp-python --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
+
+on laptop:
+pyinstaller --name FacialControlHMI --onefile --windowed --additional-hooks-dir=./hooks hook-llama_cpp.py --add-data "./config.txt;." --add-data "C:\Users\evelasquez\PycharmProjects\FacialControlHCI\.venv\lib\site-packages\mediapipe;mediapipe/" FaceTracker.py
+#on PC:
+pyinstaller --onefile --windowed --additional-hooks-dir="./hooks entry-point.py" --add-data "./config.txt;." --add-data "C:\Users\velas\PycharmProjects\ballTracker\venv\lib\site-packages\mediapipe;mediapipe/" FaceTracker.py
