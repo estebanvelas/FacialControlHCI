@@ -1,35 +1,35 @@
 #------------------Menu Selection Variables
-totalOptionsN = 8
-mouseSpeed=5
-selectionWaitTime=0.4
+totalOptionsN = 8  #how many split areas will appear in program. Default value of 8
+mouseSpeed=5  #How fast the mouse will move. Default value of 5
+selectionWaitTime=0.4  #How fast can options be selected, Default value of 0.4
 
 #------------------Custom Labels, other languages possible
-labelsABC=ABCDEFGHIJKLMNOPQRSTUVWXYZ
-labelsSpecial=`~!@#$%^&*()-_+[]\;',./<>?:{}=
+labelsABC=ABCDEFGHIJKLMNOPQRSTUVWXYZ #change to other languages character set if needed
+labelsSpecial=`~!@#$%^&*()-_+[]\;',./<>?:{}= #change to other languages character set if needed
 
 #------------------Custom Labels for Quick Options
-labelsQuick=Yes,No,Not Sure,Food,Bathroom,Hot,Cold,Hurts
+labelsQuick=Yes,No,Not Sure,Food,Bathroom,Hot,Cold,Hurts# Make this list comma separated, and with a number of options less than totalOptionsN defined above
 
 #------------------Font Options
-fontScale=0.4
-fontThickness=1
+fontScale=0.4 #modify as needed, I prefer a default value of 0.4
+fontThickness=1 #modify as needed, I prefer a default value of 1
 
 #------------------Camera Options
-camSizeX=640
-camSizeY=480
-showFPS=False
-#------------------UI Options. For showWrittenMode: Single, Mirror and CloneAndMirror
-showWritten=True
-maxWhatsWrittenSize=30
-showWrittenMode=CloneAndMirror
+camSizeX=640 #Good default is 640 to decrease performance requirements
+camSizeY=480 #Good default is 480 to decrease performance requirements
+showFPS=False #Can be true, useful to see how the software operates on your system
+#------------------UI Options
+showWritten=True #Can also be False, will hide what has been written
+maxWhatsWrittenSize=30 # Max Size of feedback character length (what has been written)
+showWrittenMode=CloneAndMirror #Options are: Single, Mirror and CloneAndMirror
 
 #------------------LLM Config
 llmWaitTime=1
-SeedWord=Hello
-LlmService=ChatGPT
+SeedWord=Hello#Change to whatever word you want to start predictions with
+LlmService=local#can be replaced with ChatGPT
 LlmKey=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
 
 #-------512,126-----------Local LLM Options
-llmContextSize=32
-llmBatchSize=32
-llmWaitTime=8
+llmContextSize=32 #how many previous tokens will be considered in a local LLM. For performance, default value is 32
+llmBatchSize=32 #How many tokens can be ran through on a batch. For performance, default value is 32
+llmWaitTime=1 #System will update this value the first time an LLM is run. Used to calculate time before LLM answer is given

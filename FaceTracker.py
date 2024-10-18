@@ -95,10 +95,26 @@ redFrameColor = (0, 0, 255)  # BGR
 alpha = 0.3
 font=cv2.FONT_HERSHEY_SIMPLEX
 
+def getAllGuffModels(directory):
+    # Create a list to store file paths and sizes
+    files_with_sizes = []
+    # Walk through the directory
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            if file.endswith('.gguf'):
+                file_path = os.path.join(root, file)
+                file_size_mb = os.path.getsize(file_path) / (1024 * 1024)  # Size in MB
+                files_with_sizes.append((file_path, file_size_mb))
+    # Sort the list by file size (smallest first)
+    sorted_files = sorted(files_with_sizes, key=lambda x: x[1])
+    # Extract only the file paths
+    sorted_file_paths = [file_path for file_path, _ in sorted_files]
+    return sorted_file_paths
 
 def loadLLM(thePath,contextSize=512,batchSize=126):
-
-    theLLM = Llama(model_path="zephyr-7b-beta.Q4_K_M.gguf", n_ctx=contextSize, n_batch=batchSize,use_gpu=True)
+    sortedPaths=getAllGuffModels("./")
+    print(f"sortedPaths: {sortedPaths}")
+    theLLM = Llama(model_path=sortedPaths[0], n_ctx=contextSize, n_batch=batchSize,use_gpu=True)
     return theLLM
 
 def generate_text(
@@ -174,6 +190,8 @@ def GetConfigSettings():
                 continue  # Skip comments and empty lines
 
             key, value = line.strip().split('=',1)
+            value = value.split('#', 1)[0].strip()
+
             if key == "totalOptionsN":
                 totalOptionsN = int(value)
                 FaceTracker.totalOptionsN=totalOptionsN
@@ -858,7 +876,7 @@ def mainLoop(queue):
         cv2.imshow("Facial Control HMI", uiFrame)
 
 if __name__ == '__main__':
-    api_url = 'https://api.example.com/data'  # Replace with your API URL
+    multiprocessing.freeze_support()  # Only necessary if using PyInstaller
     FaceTracker.llmIsWorkingFlag=True
     queue = multiprocessing.Queue()
     p = multiprocessing.Process(target=mainLoop, args=(queue,))

@@ -10,6 +10,8 @@ without CUDA:
 pip install llama-cpp-python --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
 
 on laptop:
-pyinstaller --name FacialControlHMI --onefile --windowed --additional-hooks-dir=./hooks hook-llama_cpp.py --add-data "./config.txt;." --add-data "C:\Users\evelasquez\PycharmProjects\FacialControlHCI\.venv\lib\site-packages\mediapipe;mediapipe/" FaceTracker.py
+pyinstaller --name FacialControlHMI --onefile --windowed --additional-hooks-dir="./hooks hook-llama_cpp.py" --add-data "./.venv/lib/site-packages/llama_cpp;." --add-data "./.venv/lib/site-packages/llama_cpp/lib;." --add-data "./.venv/lib/site-packages/llama_cpp/lib/llama.dll;." --add-data "C:\Users\evelasquez\PycharmProjects\FacialControlHCI\.venv\lib\site-packages\mediapipe;mediapipe/" ./FaceTracker.py
+
+
 #on PC:
 pyinstaller --onefile --windowed --additional-hooks-dir="./hooks entry-point.py" --add-data "./config.txt;." --add-data "C:\Users\velas\PycharmProjects\ballTracker\venv\lib\site-packages\mediapipe;mediapipe/" FaceTracker.py

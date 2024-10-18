@@ -3,7 +3,7 @@
 # 1. create a folder called "hooks" in your repo
 # 2. copy this file there
 # 3. add the --additional-hooks-dir flag to your pyinstaller command:
-#    ex: `pyinstaller --name binary-name --additional-hooks-dir=./hooks entry-point.py`
+#    ex: pyinstaller --name binary-name --additional-hooks-dir=./hooks entry-point.py
 
 
 from PyInstaller.utils.hooks import collect_data_files, get_package_paths
@@ -17,7 +17,8 @@ datas = collect_data_files('llama_cpp')
 
 # Append the additional .dll or .so file
 if os.name == 'nt':  # Windows
-    dll_path = os.path.join(package_path, 'llama_cpp','lib','llama.dll')
+    dll_path = os.path.join(package_path, 'llama_cpp','llama.dll')
+    #dll_path = os.path.join(package_path, 'llama_cpp','lib','llama.dll')
     datas.append((dll_path, 'llama_cpp'))
 elif sys.platform == 'darwin':  # Mac
     so_path = os.path.join(package_path, 'llama_cpp', 'llama.dylib')
