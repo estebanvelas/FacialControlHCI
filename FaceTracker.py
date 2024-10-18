@@ -3,6 +3,8 @@ import os
 import re
 
 import multiprocessing
+import socket
+
 import cv2
 import mediapipe as mp
 import time
@@ -94,6 +96,14 @@ greenFrameColor = (0, 255, 0)  # BGR
 redFrameColor = (0, 0, 255)  # BGR
 alpha = 0.3
 font=cv2.FONT_HERSHEY_SIMPLEX
+
+def is_connected():
+    try:
+        # Connect to a well-known host to check internet access
+        socket.create_connection(("www.google.com", 80), timeout=5)
+        return True
+    except OSError:
+        return False
 
 def getAllGuffModels(directory):
     # Create a list to store file paths and sizes
@@ -362,7 +372,7 @@ def getLLM(queue,LlmService,LlmKey,lastWord):
         prompt = f"Give me a list of only {totalOptionsN - len(labelsLLMOptions)} words with no explanation that go after: \"{lastWord}\""
     # print(f"prompt: {prompt}")
 
-    if LlmService=="ChatGPT":
+    if LlmService=="ChatGPT" and is_connected():
         #print("Calling ChatGPT: ")
         client = OpenAI(api_key=LlmKey)
         session = client.chat.completions.create(
