@@ -11,7 +11,7 @@ import time
 import sys
 import json
 from llama_cpp import Llama
-from openai import OpenAI
+import openai
 import numpy as np
 #from numpy.array_api import astype
 
@@ -20,6 +20,9 @@ from pynput.keyboard import Key, Controller as keyController
 from pynput.mouse import Button, Controller as mouseController
 
 import FaceTracker
+
+#bugs: not working AI, Nonetype exception. Numbers dont work
+
 
 #Virtual Keyboard
 keyboard = keyController()# Controller()
@@ -170,6 +173,8 @@ You are a helpful chatbot.<|im_end|>
     return chat_prompt_template
 
 def GetConfigSettings():
+    centerSizePercentageX=20
+    centerSizePercentageY=20
     totalOptionsN = 8
     mouseSpeed = 5
     selectionWaitTime = 0.4
@@ -202,7 +207,13 @@ def GetConfigSettings():
             key, value = line.strip().split('=',1)
             value = value.split('#', 1)[0].strip()
 
-            if key == "totalOptionsN":
+            if key == "centerSizePercentageX":
+                centerSizePercentageX = int(value)
+                FaceTracker.centerSizePercentageX=centerSizePercentageX
+            if key == "centerSizePercentageY":
+                centerSizePercentageY = int(value)
+                FaceTracker.centerSizePercentageY=centerSizePercentageY
+            elif key == "totalOptionsN":
                 totalOptionsN = int(value)
                 FaceTracker.totalOptionsN=totalOptionsN
             elif key == "mouseSpeed":
@@ -272,14 +283,15 @@ def GetConfigSettings():
 
 
     # Print the variables
-    print(f"totalOptionsN: {totalOptionsN}, mouseSpeed: {mouseSpeed}, selectionWaitTime: {selectionWaitTime}"
+    print(f"centerSizePercentage: ({centerSizePercentageX},{centerSizePercentageY}), "
+          f"totalOptionsN: {totalOptionsN}, mouseSpeed: {mouseSpeed}, selectionWaitTime: {selectionWaitTime}"
           f", labelsABC: {labelsABC}, labelsQuick: {labelsQuick}, fontScale: {fontScale}"
           f", fontThickness: {fontThickness}, camSizeX: {camSizeX}, camSizeY: {camSizeY}"
           f", showFPS: {showFPS}, showWritten: {showWritten}"
           f", llmContextSize: {llmContextSize}, llmBatchSize: {llmBatchSize}, llmWaitTime: {llmWaitTime}"
           f", maxWhatsWrittenSize: {maxWhatsWrittenSize}, showWrittenMode: {showWrittenMode}"
           f", seedWord: {seedWord}, LlmService: {LlmService}, LlmKey: {LlmKey}")
-    return (totalOptionsN,mouseSpeed,selectionWaitTime,labelsABC,labelsNumbers,labelsSpecial,labelsQuick,fontScale\
+    return (centerSizePercentageX,centerSizePercentageY,totalOptionsN,mouseSpeed,selectionWaitTime,labelsABC,labelsNumbers,labelsSpecial,labelsQuick,fontScale\
         ,fontThickness,camSizeX,camSizeY, showFPS, showWritten,llmContextSize,llmBatchSize,llmWaitTime
             ,maxWhatsWrittenSize,showWrittenMode,seedWord,LlmService,LlmKey)
 
@@ -347,7 +359,7 @@ def GetFaceSizeAndCenter(shape,landMarks):
     return faceXmin,faceXmax,faceYmin,faceYmax, centerOfFaceX,centerOfFaceY
 
 
-def GetGUI(theUIFrame,radiusAsPercent,totalN,centerFaceX,centerFaceY,nosePosition):
+def GetGUI(theUIFrame,radiusAsPercentX,radiusAsPercentY,totalN,centerFaceX,centerFaceY,nosePosition):
     theContours, centerContours = GetAreaPoints(totalN, centerFaceX, centerFaceY,100,360/(totalN*2))  # area number, total areas
     # set center of face
     for i in range(totalN):
@@ -356,12 +368,12 @@ def GetGUI(theUIFrame,radiusAsPercent,totalN,centerFaceX,centerFaceY,nosePositio
         else:
             cv2.fillPoly(theUIFrame, [theContours[i]], [150, 150, 150])
     #cv2.circle(theUIFrame, (centerFaceX, centerFaceY), radiusAsPercent, blueFrameColor, -1)
-    cv2.ellipse(theUIFrame, (centerFaceX, centerFaceY), (radiusAsPercent, int(radiusAsPercent * 0.5)), 0, 0, 360,
+    cv2.ellipse(theUIFrame, (centerFaceX, centerFaceY), (radiusAsPercentX, radiusAsPercentY), 0, 0, 360,
                 greenFrameColor, -1)
-    polyEllipse = cv2.ellipse2Poly((centerFaceX, centerFaceY), (radiusAsPercent, int(radiusAsPercent * 0.5)),
+    polyEllipse = cv2.ellipse2Poly((centerFaceX, centerFaceY), (radiusAsPercentX, radiusAsPercentY),
                                    0, 0, 360, 1)
     # set center of nose as a controller
-    cv2.circle(theUIFrame, nosePosition, int(radiusAsPercent * 0.25), redFrameColor, -1)
+    cv2.circle(theUIFrame, nosePosition, int(radiusAsPercentX * 0.25), redFrameColor, -1)
 
     return polyEllipse,theContours,centerContours
 
@@ -374,16 +386,19 @@ def getLLM(queue,LlmService,LlmKey,lastWord):
 
     if LlmService=="ChatGPT" and is_connected():
         #print("Calling ChatGPT: ")
-        client = OpenAI(api_key=LlmKey)
-        session = client.chat.completions.create(
+        openai.api_key=LlmKey
+        #client = OpenAI(api_key=LlmKey)
+        #session = client.chat.completions.create(
+        response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[{
                 "role": "user",
                 "content": prompt
             }]
         )
-        response = session.choices[0].message.content
-        reply = re.sub(r'\d+\.?\s*', '', response)
+        responseBody = response['choices'][0]['message']['content']
+        #print (f"response: \n {response}")
+        reply = re.sub(r'\d+\.?\s*', '', responseBody) #r means raw string, \d matches digits, \.? matches literal dot, ? means optional, \s matches whitespace
         result=reply.splitlines()
     else:
         prompt = generate_prompt_from_template(prompt)
@@ -790,7 +805,7 @@ def GetSelectionLogic(theSelectionCurrentTime,theCurrentSelection,theSelected,th
 
 def mainLoop(queue):
 
-    (totalOptionsN,mouseSpeed,selectionWaitTime,\
+    (centerSizeX,centerSizeY,totalOptionsN,mouseSpeed,selectionWaitTime,\
     labelsABC,labelsNumbers,labelsSpecial,labelsQuick,\
     fontScale,fontThickness,\
     camSizeX,camSizeY,showFPS,showWritten, llmContextSize,llmBatchSize,llmWaitTime,
@@ -854,14 +869,15 @@ def mainLoop(queue):
 
                         #circle on center of face
                         sizeOfFace=math.sqrt(math.pow(shape[1]*(faceXmax-faceXmin),2)+math.pow(shape[0]*(faceYmax-faceYmin),2))
-                        radiusAsPercentage=int(0.1*sizeOfFace)
+                        radiusAsPercentageX=int((centerSizeX/2)/100*sizeOfFace)
+                        radiusAsPercentageY= int((centerSizeY/2)/100 * sizeOfFace)
                         #print(centerOfFaceX,centerOfFaceY, faceXmin,faceXmax,faceYmin,faceYmax)
                         # cv2.putText(topFrame,str(idx), org, font,fontScale, color, thickness, cv2.LINE_AA)
 
                         # ---------GUI--------------
                         # create the n zones for buttons, geometry must be created by placing points in clockwise order
                         # -------------------------
-                        ellipsePoly,contours,centerOfContours=GetGUI(uiFrame,radiusAsPercentage,totalOptionsN,centerOfFaceX,centerOfFaceY,nosePosition)
+                        ellipsePoly,contours,centerOfContours=GetGUI(uiFrame,radiusAsPercentageX,radiusAsPercentageY,totalOptionsN,centerOfFaceX,centerOfFaceY,nosePosition)
                         FaceTracker.currentSelection,FaceTracker.createdLabelsList,topFrame = GetMenuSystem (queue,topFrame,FaceTracker.totalOptionsN,
                                                                                                     FaceTracker.currentSelection,FaceTracker.createdLabelsList,
                                                                                                     centerOfContours,color,lettersColor,dimensionsTop)
