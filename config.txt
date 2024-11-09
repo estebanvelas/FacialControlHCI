@@ -1,4 +1,4 @@
-FacialControlHMI_Version=1.0.6
+FacialControlHMI_Version=1.0.7
 #------------------Menu Selection Variables
 centerSizePercentageX=30                        #Percentage of face x
 centerSizePercentageY=30                        #Percentage of face y
