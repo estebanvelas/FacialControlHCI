@@ -11,7 +11,7 @@ import time
 import sys
 import json
 from llama_cpp import Llama
-import openai
+from openai import OpenAI
 import numpy as np
 #from numpy.array_api import astype
 
@@ -175,6 +175,8 @@ You are a helpful chatbot.<|im_end|>
 def GetConfigSettings():
     centerSizePercentageX=20
     centerSizePercentageY=20
+    offsetPercentageX = 0
+    offsetPercentageY = -20
     totalOptionsN = 8
     mouseSpeed = 5
     selectionWaitTime = 0.4
@@ -210,9 +212,15 @@ def GetConfigSettings():
             if key == "centerSizePercentageX":
                 centerSizePercentageX = int(value)
                 FaceTracker.centerSizePercentageX=centerSizePercentageX
-            if key == "centerSizePercentageY":
+            elif key == "centerSizePercentageY":
                 centerSizePercentageY = int(value)
                 FaceTracker.centerSizePercentageY=centerSizePercentageY
+            elif key == "offsetPercentageX":
+                offsetPercentageX = int(value)
+                FaceTracker.offsetPercentageX=offsetPercentageX
+            elif key == "offsetPercentageY":
+                offsetPercentageY = int(value)
+                FaceTracker.offsetPercentageY=offsetPercentageY
             elif key == "totalOptionsN":
                 totalOptionsN = int(value)
                 FaceTracker.totalOptionsN=totalOptionsN
@@ -283,15 +291,16 @@ def GetConfigSettings():
 
 
     # Print the variables
-    print(f"centerSizePercentage: ({centerSizePercentageX},{centerSizePercentageY}), "
-          f"totalOptionsN: {totalOptionsN}, mouseSpeed: {mouseSpeed}, selectionWaitTime: {selectionWaitTime}"
-          f", labelsABC: {labelsABC}, labelsQuick: {labelsQuick}, fontScale: {fontScale}"
-          f", fontThickness: {fontThickness}, camSizeX: {camSizeX}, camSizeY: {camSizeY}"
-          f", showFPS: {showFPS}, showWritten: {showWritten}"
-          f", llmContextSize: {llmContextSize}, llmBatchSize: {llmBatchSize}, llmWaitTime: {llmWaitTime}"
-          f", maxWhatsWrittenSize: {maxWhatsWrittenSize}, showWrittenMode: {showWrittenMode}"
-          f", seedWord: {seedWord}, LlmService: {LlmService}, LlmKey: {LlmKey}")
-    return (centerSizePercentageX,centerSizePercentageY,totalOptionsN,mouseSpeed,selectionWaitTime,labelsABC,labelsNumbers,labelsSpecial,labelsQuick,fontScale\
+    print(f"centerSizePercentage: ({centerSizePercentageX},{centerSizePercentageY}), \n"
+          f", offsetPercentageY: ({offsetPercentageX},{offsetPercentageY}), \n"
+          f", totalOptionsN: {totalOptionsN}, mouseSpeed: {mouseSpeed}, selectionWaitTime: {selectionWaitTime}\n"
+          f", labelsABC: {labelsABC}, labelsQuick: {labelsQuick}, \n"
+          f", fontScale: {fontScale}, fontThickness: {fontThickness}, camSizeX: {camSizeX}, camSizeY: {camSizeY}\n"
+          f", showFPS: {showFPS}, showWritten: {showWritten}\n"
+          f", llmContextSize: {llmContextSize}, llmBatchSize: {llmBatchSize}, llmWaitTime: {llmWaitTime}\n"
+          f", maxWhatsWrittenSize: {maxWhatsWrittenSize}, showWrittenMode: {showWrittenMode}\n"
+          f", seedWord: {seedWord}, LlmService: {LlmService}, LlmKey: {LlmKey}\n")
+    return (centerSizePercentageX,centerSizePercentageY,offsetPercentageX,offsetPercentageY,totalOptionsN,mouseSpeed,selectionWaitTime,labelsABC,labelsNumbers,labelsSpecial,labelsQuick,fontScale\
         ,fontThickness,camSizeX,camSizeY, showFPS, showWritten,llmContextSize,llmBatchSize,llmWaitTime
             ,maxWhatsWrittenSize,showWrittenMode,seedWord,LlmService,LlmKey)
 
@@ -386,19 +395,17 @@ def getLLM(queue,LlmService,LlmKey,lastWord):
 
     if LlmService=="ChatGPT" and is_connected():
         #print("Calling ChatGPT: ")
-        openai.api_key=LlmKey
-        #client = OpenAI(api_key=LlmKey)
-        #session = client.chat.completions.create(
-        response = openai.ChatCompletion.create(
+        client = OpenAI(api_key=LlmKey)
+        session = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[{
                 "role": "user",
                 "content": prompt
             }]
         )
-        responseBody = response['choices'][0]['message']['content']
-        #print (f"response: \n {response}")
-        reply = re.sub(r'\d+\.?\s*', '', responseBody) #r means raw string, \d matches digits, \.? matches literal dot, ? means optional, \s matches whitespace
+        response = session.choices[0].message.content
+        print (f"response: \n {response}")
+        reply = re.sub(r'\d+\.?\s*', '', response) #r means raw string, \d matches digits, \.? matches literal dot, ? means optional, \s matches whitespace
         result=reply.splitlines()
     else:
         prompt = generate_prompt_from_template(prompt)
@@ -538,6 +545,9 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
                 keyboard.press(Key.space)
                 keyboard.release(Key.space)
                 FaceTracker.whatsWritten = FaceTracker.whatsWritten+" "
+                last_word = FaceTracker.whatsWritten.split()[-1] if FaceTracker.whatsWritten.strip() else None
+                if last_word is not None:
+                    FaceTracker.lastWord=last_word
             elif theCurrentSelection[0] == 4:#Mouse Control
                 theCurrentSelection = [-1, "MouseControl"]
                 print("menu: " + str(labelsMainMenu[theCurrentSelection[0]]))
@@ -654,6 +664,7 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
                 print("Typed Quick: "+labelsQuick[theCurrentSelection[0]-len(labelsQuickOptions)])
                 keyboard.type(" "+labelsQuick[theCurrentSelection[0]-len(labelsQuickOptions)]+" ")
                 FaceTracker.whatsWritten = FaceTracker.whatsWritten + " "+labelsQuick[theCurrentSelection[0]-len(labelsQuickOptions)]+" "
+                FaceTracker.lastWord = labelsQuick[theCurrentSelection[0]-len(labelsQuickOptions)]
             theCurrentSelection[0] = -1
         elif(theCurrentSelection[1]=="LLM"):
             DisplayOtherMenus(labelsLMM,labelsLLMOptions, totalN, theTopFrame,centerOfContours,color)
@@ -805,7 +816,7 @@ def GetSelectionLogic(theSelectionCurrentTime,theCurrentSelection,theSelected,th
 
 def mainLoop(queue):
 
-    (centerSizeX,centerSizeY,totalOptionsN,mouseSpeed,selectionWaitTime,\
+    (centerSizeX,centerSizeY,offsetX,offsetY,totalOptionsN,mouseSpeed,selectionWaitTime,\
     labelsABC,labelsNumbers,labelsSpecial,labelsQuick,\
     fontScale,fontThickness,\
     camSizeX,camSizeY,showFPS,showWritten, llmContextSize,llmBatchSize,llmWaitTime,
@@ -871,6 +882,11 @@ def mainLoop(queue):
                         sizeOfFace=math.sqrt(math.pow(shape[1]*(faceXmax-faceXmin),2)+math.pow(shape[0]*(faceYmax-faceYmin),2))
                         radiusAsPercentageX=int((centerSizeX/2)/100*sizeOfFace)
                         radiusAsPercentageY= int((centerSizeY/2)/100 * sizeOfFace)
+                        offsetAsPixelsX=int((offsetX/2)/100*sizeOfFace)
+                        offsetAsPixelsY = int((offsetY/2) / 100 * sizeOfFace)
+                        #print(f"offsetAsPixels: ({offsetAsPixelsX},{offsetAsPixelsY})")
+                        centerOfFaceX = centerOfFaceX+offsetAsPixelsX
+                        centerOfFaceY = centerOfFaceY+offsetAsPixelsY
                         #print(centerOfFaceX,centerOfFaceY, faceXmin,faceXmax,faceYmin,faceYmax)
                         # cv2.putText(topFrame,str(idx), org, font,fontScale, color, thickness, cv2.LINE_AA)
 
