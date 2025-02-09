@@ -39,6 +39,8 @@ prev_frame_time=0
 new_frame_time=0
 
 #menu selection variables
+selectionType='TimedOnLocation'                   #BackToCenter,TimedOnLocation
+timeOnLocation=3
 totalOptionsN = 8
 mouseSpeed=5
 selectionWaitTime=0.4
@@ -84,7 +86,7 @@ showFPS =False
 showWritten=False
 llmContextSize=512
 llmBatchSize=126
-llmWaitTime=10
+llmWaitTime=0
 startTime=0
 llmIsWorkingFlag=False
 whatsWritten=""
@@ -173,6 +175,8 @@ You are a helpful chatbot.<|im_end|>
     return chat_prompt_template
 
 def GetConfigSettings():
+    selectionType='BackToCenter'
+    timeOnLocation=3
     centerSizePercentageX=20
     centerSizePercentageY=20
     offsetPercentageX = 0
@@ -192,7 +196,7 @@ def GetConfigSettings():
     showWritten=False
     llmContextSize=512
     llmBatchSize=126
-    llmWaitTime=10
+    llmWaitTime=0
     maxWhatsWrittenSize=20
     showWrittenMode="Single"
     seedWord="Emotions"
@@ -208,8 +212,13 @@ def GetConfigSettings():
 
             key, value = line.strip().split('=',1)
             value = value.split('#', 1)[0].strip()
-
-            if key == "centerSizePercentageX":
+            if key == "selectionType":
+                selectionType = value
+                FaceTracker.selectionType=selectionType
+            elif key == "timeOnLocation":
+                timeOnLocation = int(value)
+                FaceTracker.timeOnLocation=timeOnLocation
+            elif key == "centerSizePercentageX":
                 centerSizePercentageX = int(value)
                 FaceTracker.centerSizePercentageX=centerSizePercentageX
             elif key == "centerSizePercentageY":
@@ -291,7 +300,8 @@ def GetConfigSettings():
 
 
     # Print the variables
-    print(f"centerSizePercentage: ({centerSizePercentageX},{centerSizePercentageY}), \n"
+    print(f"selectionType: {selectionType} \n"
+          f", timeOnLocation: {timeOnLocation} \n"
           f", offsetPercentageY: ({offsetPercentageX},{offsetPercentageY}), \n"
           f", totalOptionsN: {totalOptionsN}, mouseSpeed: {mouseSpeed}, selectionWaitTime: {selectionWaitTime}\n"
           f", labelsABC: {labelsABC}, labelsQuick: {labelsQuick}, \n"
@@ -300,7 +310,7 @@ def GetConfigSettings():
           f", llmContextSize: {llmContextSize}, llmBatchSize: {llmBatchSize}, llmWaitTime: {llmWaitTime}\n"
           f", maxWhatsWrittenSize: {maxWhatsWrittenSize}, showWrittenMode: {showWrittenMode}\n"
           f", seedWord: {seedWord}, LlmService: {LlmService}, LlmKey: {LlmKey}\n")
-    return (centerSizePercentageX,centerSizePercentageY,offsetPercentageX,offsetPercentageY,totalOptionsN,mouseSpeed,selectionWaitTime,labelsABC,labelsNumbers,labelsSpecial,labelsQuick,fontScale\
+    return (selectionType,timeOnLocation,centerSizePercentageX,centerSizePercentageY,offsetPercentageX,offsetPercentageY,totalOptionsN,mouseSpeed,selectionWaitTime,labelsABC,labelsNumbers,labelsSpecial,labelsQuick,fontScale\
         ,fontThickness,camSizeX,camSizeY, showFPS, showWritten,llmContextSize,llmBatchSize,llmWaitTime
             ,maxWhatsWrittenSize,showWrittenMode,seedWord,LlmService,LlmKey)
 
@@ -479,9 +489,12 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
             llmCall.start()
             FaceTracker.llmIsWorkingFlag= True
         else:
-            FaceTracker.prettyPrintInCamera(theTopFrame,
-                                f"LLM has been called with \"{FaceTracker.lastWord}\", aprox time: {totalTime} seconds out of {FaceTracker.llmWaitTime}",
-                                (int(dimensionsTop[0] / 2), 20), color)
+
+            if FaceTracker.llmWaitTime<=0:
+                theText = f"LLM has been called with \"{FaceTracker.lastWord}\", Calculating Timeframe for future calls"
+            else:
+                theText = f"LLM has been called with \"{FaceTracker.lastWord}\", aprox time: {totalTime} seconds out of {FaceTracker.llmWaitTime}"
+            FaceTracker.prettyPrintInCamera(theTopFrame,theText,(int(dimensionsTop[0] / 2), 20), color)
 
     if not queue.empty():
         FaceTracker.llmIsWorkingFlag = False
@@ -495,8 +508,9 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
 
     if FaceTracker.llmIsWorkingFlag:
         if FaceTracker.llmWaitTime<=0:
-            FaceTracker.llmWaitTime=1
-        warningText=f"LLM: \"{FaceTracker.lastWord}\",aprox {int(totalTime/FaceTracker.llmWaitTime*100)}% done, {int(FaceTracker.llmWaitTime-totalTime)} seconds left"
+            warningText = f"LLM: \"{FaceTracker.lastWord}\",Calculating seconds left for next call"
+        else:
+            warningText=f"LLM: \"{FaceTracker.lastWord}\",aprox {int(totalTime/FaceTracker.llmWaitTime*100)}% done, {int(FaceTracker.llmWaitTime-totalTime)} seconds left"
         #print(dimensionsTop)
         FaceTracker.prettyPrintInCamera(theTopFrame, warningText,(int(dimensionsTop[1] / 2),dimensionsTop[0]-30 ), FaceTracker.redFrameColor,onCenter=True)#x and y are inverted in call
 
@@ -785,42 +799,76 @@ def GetMainMenu(totalN,theTopFrame,theCurrentSelection,centerOfContours,color,le
         createdLabel.append("")
     return createdLabel
 
-def GetSelectionLogic(theSelectionCurrentTime,theCurrentSelection,theSelected,thePrevSelected,ellipsePoly,nosePosition,contours):
-    noseOnNeutral = cv2.pointPolygonTest(ellipsePoly, nosePosition, False)  # 0,1 is on contour
-    if noseOnNeutral >= 0:  # inside of ellipse
-        if theSelectionCurrentTime != 0:
-            print("Timer Reset Neutral Zone")
-            theSelectionCurrentTime = 0
-            theSelected=-1
-    elif noseOnNeutral == -1: #outside of ellipse
-        for idx, contour in enumerate(contours):
-            noseOptionResult = cv2.pointPolygonTest(contour, nosePosition, False)
-            if noseOptionResult > 0:
-                theSelectionCurrentTime = selectionCurrentTime + 1 / fps
-                theSelected = idx
-                if thePrevSelected != theSelected:
-                    # change timer depending on area change
-                    theSelectionCurrentTime = 0
-                    thePrevSelected=theSelected
-                    # print("Timer Reset Area Changed")
-                elif theSelectionCurrentTime >= selectionWaitTime:
+def GetSelectionLogic(theTopFrame,dimensionsTop,theSelectionCurrentTime,theCurrentSelection,theSelected,thePrevSelected,ellipsePoly,nosePosition,contours):
+    if FaceTracker.selectionType=='TimedOnLocation':
+        theSelected = -1
+        noseOnNeutral = cv2.pointPolygonTest(ellipsePoly, nosePosition, False)  # 0,1 is on contour,-1 is not on contour
+        if noseOnNeutral<0:
+            #print(f'GetSelectionLogic: timeOnLocation: {FaceTracker.timeOnLocation}, theSelectionCurrentTime: {theSelectionCurrentTime}')
+            for idx, contour in enumerate(contours):
+                noseOptionResult = cv2.pointPolygonTest(contour, nosePosition, False)
+                if noseOptionResult > 0:
                     theSelected = idx
-                    thePrevSelected = theSelected
+                    if thePrevSelected!=theSelected:
+                        thePrevSelected = theSelected
+                        theSelectionCurrentTime=0
+                    else:
+                        if theSelectionCurrentTime <= FaceTracker.timeOnLocation:
+                            theSelectionCurrentTime += selectionCurrentTime + 1 / fps
+                            desiredText=f'Selection on {(FaceTracker.timeOnLocation-theSelectionCurrentTime):.1f}'
+                            #print(desiredText)#topFrame,dimensionsTop,
+                            FaceTracker.prettyPrintInCamera(theTopFrame, desiredText,
+                                                            (int(dimensionsTop[1] / 2), dimensionsTop[0] - 15),
+                                                            FaceTracker.redFrameColor,
+                                                            onCenter=True)  # x and y are inverted in call
+                        else:  # time has passed
+                            print(f"Timer Reset, selected {theCurrentSelection[0]}")
+                            theCurrentSelection[0] = thePrevSelected
+                            theSelectionCurrentTime = 0
+                            print("Selected: " + str(theCurrentSelection[0]))
                     break
-    if (theSelected == -1) and (thePrevSelected != theSelected):
-        theCurrentSelection[0] = thePrevSelected
-        print("Selected: " + str(theCurrentSelection[0]))
-        thePrevSelected = theSelected
+
+    else:#BackToCenter or any other
+        noseOnNeutral = cv2.pointPolygonTest(ellipsePoly, nosePosition, False)  # 0,1 is on contour
+        if noseOnNeutral >= 0:  # inside of ellipse
+            if theSelectionCurrentTime != 0:
+                print("Timer Reset Neutral Zone")
+                theSelectionCurrentTime = 0
+                theSelected=-1
+        elif noseOnNeutral == -1: #outside of ellipse
+            for idx, contour in enumerate(contours):
+                noseOptionResult = cv2.pointPolygonTest(contour, nosePosition, False)
+                if noseOptionResult > 0:
+                    theSelectionCurrentTime = selectionCurrentTime + 1 / fps
+                    theSelected = idx
+                    if thePrevSelected != theSelected:
+                        # change timer depending on area change
+                        theSelectionCurrentTime = 0
+                        thePrevSelected=theSelected
+                        # print("Timer Reset Area Changed")
+                    elif theSelectionCurrentTime >= selectionWaitTime:
+                        theSelected = idx
+                        thePrevSelected = theSelected
+                        break
+        if (theSelected == -1) and (thePrevSelected != theSelected):
+            theCurrentSelection[0] = thePrevSelected
+            print("Selected: " + str(theCurrentSelection[0]))
+            thePrevSelected = theSelected
+
     return theSelected,thePrevSelected,theCurrentSelection,theSelectionCurrentTime
 
 
 def mainLoop(queue):
 
-    (centerSizeX,centerSizeY,offsetX,offsetY,totalOptionsN,mouseSpeed,selectionWaitTime,\
-    labelsABC,labelsNumbers,labelsSpecial,labelsQuick,\
-    fontScale,fontThickness,\
-    camSizeX,camSizeY,showFPS,showWritten, llmContextSize,llmBatchSize,llmWaitTime,
-     maxWhatsWrittenSize,showWrittenMode,seedWord,LlmService,LlmKey)=GetConfigSettings()
+    (selectionType,timeOnLocation,
+     centerSizeX,centerSizeY,offsetX,offsetY,
+     totalOptionsN,mouseSpeed,selectionWaitTime,
+     labelsABC,labelsNumbers,labelsSpecial,labelsQuick,
+     fontScale,fontThickness,
+     camSizeX,camSizeY,showFPS,showWritten,
+     llmContextSize,llmBatchSize,llmWaitTime,
+     maxWhatsWrittenSize,showWrittenMode,seedWord,
+     LlmService,LlmKey)=GetConfigSettings()
 
     #FaceTracker.llm=loadLLM("zephyr-7b-beta.Q4_K_M.gguf",llmContextSize,llmBatchSize)
     mpDraw = mp.solutions.drawing_utils
@@ -901,7 +949,7 @@ def mainLoop(queue):
                         # Selection Logic----------
                         # -------------------------
                         FaceTracker.selected,FaceTracker.prevSelected,FaceTracker.currentSelection,FaceTracker.selectionCurrentTime =\
-                            GetSelectionLogic(FaceTracker.selectionCurrentTime,FaceTracker.currentSelection,FaceTracker.selected,FaceTracker.prevSelected,ellipsePoly,nosePosition,contours)
+                            GetSelectionLogic(topFrame,dimensionsTop,FaceTracker.selectionCurrentTime,FaceTracker.currentSelection,FaceTracker.selected,FaceTracker.prevSelected,ellipsePoly,nosePosition,contours)
 
 
         # FPS calculations

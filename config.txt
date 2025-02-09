@@ -1,5 +1,7 @@
-FacialControlHMI_Version=1.0.7
+FacialControlHMI_Version=1.0.8
 #------------------Menu Selection Variables
+selectionType=TimedOnLocation                   #BackToCenter,TimedOnLocation
+timeOnLocation=3                                #seconds needed in location
 centerSizePercentageX=30                        #Percentage of face x
 centerSizePercentageY=30                        #Percentage of face y
 offsetPercentageX=0                             #Percentage of face x
@@ -37,4 +39,4 @@ LlmKey=sk-proj-GnLR2vu9MSRn70T99kwImtg99dS2_DKwlz-2-rshDRRE9L41yeGaKbYqDOwfbkhb_
 #-------512,126-----------Local LLM Options
 llmContextSize=32                               #how many previous tokens will be considered in a local LLM. For performance, default value is 32
 llmBatchSize=32                                 #How many tokens can be ran through on a batch. For performance, default value is 32
-llmWaitTime=5
+llmWaitTime=0
