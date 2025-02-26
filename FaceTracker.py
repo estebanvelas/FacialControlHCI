@@ -54,7 +54,7 @@ labelsMouse=["Down","Left","Up","Right"]
 #------------------
 labelsQuickOptions=["LLM","BackSpace","Back"]
 labelsLLMOptions=["Quick","BackSpace","Back"]
-labelsLMM=["test1","test2","test3","test4","test5",]
+labelsLMM=["","","","","",]
 #------------------
 configFilePath='./config.txt'
 
@@ -586,6 +586,7 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
         elif(theCurrentSelection[1]=="MouseControl"):
             DisplayMouseMenu(labelsMouse, labelsMouseMenu, totalN, theTopFrame,centerOfContours,color)
             #"Click","Back","Double Click","RightClick"
+
             if theCurrentSelection[0] == 2:  #"Back",
                 theCurrentSelection = [-1, "MainMenu"]
                 print("Selected Option: MainMenu")
@@ -614,6 +615,9 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
             elif theCurrentSelection[0] == 7:  # Right
                 mouse.move(mouseSpeed, 0)
                 print("mouse moved left: " + str(mouseSpeed))
+            elif theCurrentSelection[0] == -1:  # Right
+                mouse.move(0, 0)
+                print("mouse is still. ")
         elif(theCurrentSelection[1]=="MultipleLetters" or theCurrentSelection[1]=="MultipleNumbers" or theCurrentSelection[1]=="MultipleSpecialChars"):
             #select character set
 
@@ -754,22 +758,24 @@ def GetCharacterDivisionMenu(theLabelsList, totalN, theTopFrame, theCurrentSelec
     return createdLabel,theCurrentSelection
 
 def prettyPrintInCamera(topFrame, text, theOrg, theColor, lineType=cv2.LINE_AA, onCenter=False):
-    text_size = cv2.getTextSize(text, font, FaceTracker.fontScale, FaceTracker.fontThickness)[0]
-    paddingPercentage=.1
-    proportionalPadding=[math.floor(text_size[0]*paddingPercentage),math.floor(text_size[1]*paddingPercentage)]
-    # Create a background rectangle
-    background_x1 = theOrg[0] - proportionalPadding[0]
-    background_y1 = theOrg[1] - text_size[1] - proportionalPadding[1]
-    background_x2 = theOrg[0] + text_size[0] + proportionalPadding[0]
-    background_y2 = theOrg[1] + proportionalPadding[1]
-    if onCenter:
-        pixelsToSubstract = (math.floor(text_size[0]/2),math.floor(text_size[1]/2))
-        cv2.rectangle(topFrame, (background_x1-pixelsToSubstract[0], background_y1-pixelsToSubstract[1]),
-                      (background_x2-pixelsToSubstract[0], background_y2-pixelsToSubstract[1]), (255, 255, 255), -1)
-        cv2.putText(topFrame, text, (theOrg[0]-pixelsToSubstract[0],theOrg[1]-pixelsToSubstract[1]), font, FaceTracker.fontScale, theColor, fontThickness, lineType)
-    else:
-        cv2.rectangle(topFrame, (background_x1, background_y1), (background_x2, background_y2), (255, 255, 255), -1)
-        cv2.putText(topFrame, text, theOrg, font, FaceTracker.fontScale, theColor, fontThickness,lineType)
+    text_size=0
+    if text !="":
+        text_size = cv2.getTextSize(text, font, FaceTracker.fontScale, FaceTracker.fontThickness)[0]
+        paddingPercentage=.1
+        proportionalPadding=[math.floor(text_size[0]*paddingPercentage),math.floor(text_size[1]*paddingPercentage)]
+        # Create a background rectangle
+        background_x1 = theOrg[0] - proportionalPadding[0]
+        background_y1 = theOrg[1] - text_size[1] - proportionalPadding[1]
+        background_x2 = theOrg[0] + text_size[0] + proportionalPadding[0]
+        background_y2 = theOrg[1] + proportionalPadding[1]
+        if onCenter:
+            pixelsToSubstract = (math.floor(text_size[0]/2),math.floor(text_size[1]/2))
+            cv2.rectangle(topFrame, (background_x1-pixelsToSubstract[0], background_y1-pixelsToSubstract[1]),
+                          (background_x2-pixelsToSubstract[0], background_y2-pixelsToSubstract[1]), (255, 255, 255), -1)
+            cv2.putText(topFrame, text, (theOrg[0]-pixelsToSubstract[0],theOrg[1]-pixelsToSubstract[1]), font, FaceTracker.fontScale, theColor, fontThickness, lineType)
+        else:
+            cv2.rectangle(topFrame, (background_x1, background_y1), (background_x2, background_y2), (255, 255, 255), -1)
+            cv2.putText(topFrame, text, theOrg, font, FaceTracker.fontScale, theColor, fontThickness,lineType)
     return text_size
 
 
@@ -800,7 +806,31 @@ def GetMainMenu(totalN,theTopFrame,theCurrentSelection,centerOfContours,color,le
     return createdLabel
 
 def GetSelectionLogic(theTopFrame,dimensionsTop,theSelectionCurrentTime,theCurrentSelection,theSelected,thePrevSelected,ellipsePoly,nosePosition,contours):
-    if FaceTracker.selectionType=='TimedOnLocation':
+    if FaceTracker.currentSelection[1]=="MouseControl":
+        theSelected = -1
+        noseOnNeutral = cv2.pointPolygonTest(ellipsePoly, nosePosition, False)  # 0,1 is on contour,-1 is not on contour
+        if noseOnNeutral < 0:
+            # print(f'GetSelectionLogic: timeOnLocation: {FaceTracker.timeOnLocation}, theSelectionCurrentTime: {theSelectionCurrentTime}')
+            for idx, contour in enumerate(contours):
+                noseOptionResult = cv2.pointPolygonTest(contour, nosePosition, False)
+                if noseOptionResult > 0:
+                    theSelected = idx
+                    if thePrevSelected != theSelected:
+                        thePrevSelected = theSelected
+                        theSelectionCurrentTime = 0
+                    else:
+                        if theSelectionCurrentTime <= .1:
+                            theSelectionCurrentTime += selectionCurrentTime + 1 / fps
+                        else:  # time has passed
+                            print(f"Timer Reset, selected {theCurrentSelection[0]}")
+                            theCurrentSelection[0] = thePrevSelected
+                            theSelectionCurrentTime = 0
+                            print("Selected: " + str(theCurrentSelection[0]))
+                    break
+        else:
+            theCurrentSelection[0] = -1
+
+    elif FaceTracker.selectionType=='TimedOnLocation':
         theSelected = -1
         noseOnNeutral = cv2.pointPolygonTest(ellipsePoly, nosePosition, False)  # 0,1 is on contour,-1 is not on contour
         if noseOnNeutral<0:
