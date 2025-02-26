@@ -216,7 +216,7 @@ def GetConfigSettings():
                 selectionType = value
                 FaceTracker.selectionType=selectionType
             elif key == "timeOnLocation":
-                timeOnLocation = int(value)
+                timeOnLocation = float(value)
                 FaceTracker.timeOnLocation=timeOnLocation
             elif key == "centerSizePercentageX":
                 centerSizePercentageX = int(value)
@@ -754,7 +754,7 @@ def GetCharacterDivisionMenu(theLabelsList, totalN, theTopFrame, theCurrentSelec
     return createdLabel,theCurrentSelection
 
 def prettyPrintInCamera(topFrame, text, theOrg, theColor, lineType=cv2.LINE_AA, onCenter=False):
-    text_size = cv2.getTextSize(text, font, fontScale, fontThickness)[0]
+    text_size = cv2.getTextSize(text, font, FaceTracker.fontScale, FaceTracker.fontThickness)[0]
     paddingPercentage=.1
     proportionalPadding=[math.floor(text_size[0]*paddingPercentage),math.floor(text_size[1]*paddingPercentage)]
     # Create a background rectangle
@@ -766,10 +766,10 @@ def prettyPrintInCamera(topFrame, text, theOrg, theColor, lineType=cv2.LINE_AA, 
         pixelsToSubstract = (math.floor(text_size[0]/2),math.floor(text_size[1]/2))
         cv2.rectangle(topFrame, (background_x1-pixelsToSubstract[0], background_y1-pixelsToSubstract[1]),
                       (background_x2-pixelsToSubstract[0], background_y2-pixelsToSubstract[1]), (255, 255, 255), -1)
-        cv2.putText(topFrame, text, (theOrg[0]-pixelsToSubstract[0],theOrg[1]-pixelsToSubstract[1]), font, fontScale, theColor, fontThickness, lineType)
+        cv2.putText(topFrame, text, (theOrg[0]-pixelsToSubstract[0],theOrg[1]-pixelsToSubstract[1]), font, FaceTracker.fontScale, theColor, fontThickness, lineType)
     else:
         cv2.rectangle(topFrame, (background_x1, background_y1), (background_x2, background_y2), (255, 255, 255), -1)
-        cv2.putText(topFrame, text, theOrg, font, fontScale, theColor, fontThickness,lineType)
+        cv2.putText(topFrame, text, theOrg, font, FaceTracker.fontScale, theColor, fontThickness,lineType)
     return text_size
 
 

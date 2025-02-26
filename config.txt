@@ -1,9 +1,9 @@
-FacialControlHMI_Version=1.0.8
+FacialControlHMI_Version=1.0.9
 #------------------Menu Selection Variables
 selectionType=TimedOnLocation                   #BackToCenter,TimedOnLocation
-timeOnLocation=3                                #seconds needed in location
-centerSizePercentageX=30                        #Percentage of face x
-centerSizePercentageY=30                        #Percentage of face y
+timeOnLocation=1.5                              #seconds needed in location
+centerSizePercentageX=25                        #Percentage of face x
+centerSizePercentageY=25                        #Percentage of face y
 offsetPercentageX=0                             #Percentage of face x
 offsetPercentageY=10                            #Percentage of face y
 totalOptionsN = 8                               #how many split areas will appear in program. Default value of 8. Cannot be less than 8.
@@ -18,7 +18,7 @@ labelsSpecial=`~!@#$%^&*()-_+[]\;',./<>?:{}=    #change to other languages chara
 labelsQuick=Yes,No,Not Sure,Food,Bathroom,Hot,Cold,Hurts    # Make this list comma separated, and with a number of options less than totalOptionsN defined above
 
 #------------------Font Options
-fontScale=0.4                                   #modify as needed, I prefer a default value of 0.4
+fontScale=0.9                                   #modify as needed, I prefer a default value of 0.4
 fontThickness=1                                 #modify as needed, I prefer a default value of 1
 
 #------------------Camera Options
@@ -39,4 +39,4 @@ LlmKey=sk-proj-GnLR2vu9MSRn70T99kwImtg99dS2_DKwlz-2-rshDRRE9L41yeGaKbYqDOwfbkhb_
 #-------512,126-----------Local LLM Options
 llmContextSize=32                               #how many previous tokens will be considered in a local LLM. For performance, default value is 32
 llmBatchSize=32                                 #How many tokens can be ran through on a batch. For performance, default value is 32
-llmWaitTime=0
+llmWaitTime=2
