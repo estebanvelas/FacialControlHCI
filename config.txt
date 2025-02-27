@@ -1,4 +1,4 @@
-FacialControlHMI_Version=1.0.9
+FacialControlHMI_Version=1.0.11
 #------------------Menu Selection Variables
 selectionType=TimedOnLocation                   #BackToCenter,TimedOnLocation
 timeOnLocation=1.3                              #seconds needed in location
@@ -28,7 +28,7 @@ showFPS=False                                   #Can be true, useful to see how 
 #------------------UI Options
 showWritten=True                                #Can also be False, will hide what has been written
 maxWhatsWrittenSize=30                          # Max Size of feedback character length (what has been written)
-showWrittenMode=CloneAndMirror                  #Options are: Single, Mirror and CloneAndMirror
+showWrittenMode=CloneAndFlipMirror              #Options are: Single, Mirror, CloneAndMirror, and CloneAndFlipMirror
 
 #------------------LLM Config
 llmWaitTime=1

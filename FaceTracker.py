@@ -443,7 +443,7 @@ def showWhatsWritten(theTopFrame,dimensionsTop):
         #put black background
         top_half = np.zeros((topHalfSize[0], topHalfSize[1], 3), dtype=np.uint8)
 
-        if FaceTracker.showWrittenMode=="CloneAndMirror":
+        if FaceTracker.showWrittenMode.lower()=="CloneAndMirror".lower():
             left_half = top_half[:, :topHalfSize[1] // 2]  # Left half
             right_half = top_half[:, topHalfSize[1] // 2:]  # Right half
             sideHalfSize = left_half.shape
@@ -460,7 +460,24 @@ def showWhatsWritten(theTopFrame,dimensionsTop):
             mirrored_right_half = cv2.flip(right_half, 1)
             combined_TopHalf = cv2.hconcat([left_half, mirrored_right_half])
             theTopFrame = cv2.vconcat([combined_TopHalf, bottom_half])
-        #mirror
+        elif FaceTracker.showWrittenMode.lower()=="CloneAndFlipMirror".lower():
+            left_half = top_half[:, :topHalfSize[1] // 2]  # Left half
+            right_half = top_half[:, topHalfSize[1] // 2:]  # Right half
+            sideHalfSize = left_half.shape
+            # put white text on black background
+            (text_width, text_height), baseline = cv2.getTextSize(FaceTracker.whatsWritten, FaceTracker.font,
+                                                                  FaceTracker.fontScale, FaceTracker.fontThickness)
+            cv2.putText(right_half, FaceTracker.whatsWritten,
+                        (int((sideHalfSize[1] / 2) - text_width / 2), text_height + 20), FaceTracker.font,
+                        FaceTracker.fontScale, (255, 255, 255), FaceTracker.fontThickness, cv2.LINE_AA)
+            cv2.putText(left_half, FaceTracker.whatsWritten,
+                        (int((sideHalfSize[1] / 2) - text_width / 2), text_height + 20), FaceTracker.font,
+                        FaceTracker.fontScale, (255, 255, 255), FaceTracker.fontThickness, cv2.LINE_AA)
+            # Create a mirrored version of the image
+            mirrored_right_half = cv2.flip(right_half, 1)
+            mirrored_right_half = cv2.flip(mirrored_right_half, 0)
+            combined_TopHalf = cv2.hconcat([left_half, mirrored_right_half])
+            theTopFrame = cv2.vconcat([combined_TopHalf, bottom_half])
         else:
             #put white text on black background
             (text_width, text_height), baseline = cv2.getTextSize(FaceTracker.whatsWritten, FaceTracker.font, FaceTracker.fontScale,FaceTracker.fontThickness)
