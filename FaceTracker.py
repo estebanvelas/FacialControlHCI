@@ -428,28 +428,43 @@ def getLLM(queue,LlmService,LlmKey,lastWord):
         #print(f"generated Text: {FaceTracker.labelsLMM}")
     queue.put(result)
 
-def showWhatsWritten(theTopFrame,dimensionsTop):
-    #show up until max numbers of characters
-    if len(FaceTracker.whatsWritten)>FaceTracker.maxWhatsWrittenSize:
+def determineMaxWrittenSize(screenWidth, whatsWritten,font,fontScale,fontThickness):
+    if len(whatsWritten)<=1:
+        whatsWritten="A"
+    (text_width, text_height), baseline = cv2.getTextSize(whatsWritten, font, fontScale, fontThickness)
+    oneCharTextWidth=math.ceil(text_width/len(whatsWritten))#average char size
+    max_chars = math.floor(screenWidth / oneCharTextWidth)
+    # show up until max numbers of characters
+    if max_chars<FaceTracker.maxWhatsWrittenSize:
+        FaceTracker.maxWhatsWrittenSize=int(max_chars)
+    if max_chars<len(FaceTracker.whatsWritten):
         FaceTracker.whatsWritten=FaceTracker.whatsWritten[-FaceTracker.maxWhatsWrittenSize:]
-    #start options
-    if "mirror" in FaceTracker.showWrittenMode.lower():
-        percentageTakenByWritten = .1
-        top_height = int(dimensionsTop[0] * percentageTakenByWritten)
-        # splitIntoHalves
-        top_half = theTopFrame[:top_height, :]
-        bottom_half = theTopFrame[top_height:, :]
-        topHalfSize = top_half.shape
-        #put black background
-        top_half = np.zeros((topHalfSize[0], topHalfSize[1], 3), dtype=np.uint8)
+    #print(f"max chars: {max_chars}, len(whatsWritten): {len(whatsWritten)}, whats written: \"{FaceTracker.whatsWritten}\"")
+    return (text_width, text_height), baseline
 
+def showWhatsWritten(theTopFrame,dimensionsTop):
+    #start options
+    percentageTakenByWritten = .1 #10% of screen taken by secondary screen
+
+    top_height = int(dimensionsTop[0] * percentageTakenByWritten)
+    # splitIntoHalves
+    top_half = theTopFrame[:top_height, :]
+    bottom_half = theTopFrame[top_height:, :]
+    topHalfSize = top_half.shape
+
+    (text_width, text_height), baseline=determineMaxWrittenSize(topHalfSize[1],FaceTracker.whatsWritten, FaceTracker.font,
+                                                          FaceTracker.fontScale, FaceTracker.fontThickness)
+
+    # put black background
+    top_half = np.zeros((topHalfSize[0], topHalfSize[1], 3), dtype=np.uint8)
+
+    if "mirror" in FaceTracker.showWrittenMode.lower():
+        left_half = top_half[:, :topHalfSize[1] // 2]  # Left half
+        right_half = top_half[:, topHalfSize[1] // 2:]  # Right half
+        sideHalfSize = left_half.shape
+        (text_width, text_height), baseline= determineMaxWrittenSize(sideHalfSize[1],FaceTracker.whatsWritten, FaceTracker.font,FaceTracker.fontScale, FaceTracker.fontThickness)
+        # put white text on black background
         if FaceTracker.showWrittenMode.lower()=="CloneAndMirror".lower():
-            left_half = top_half[:, :topHalfSize[1] // 2]  # Left half
-            right_half = top_half[:, topHalfSize[1] // 2:]  # Right half
-            sideHalfSize = left_half.shape
-            # put white text on black background
-            (text_width, text_height), baseline = cv2.getTextSize(FaceTracker.whatsWritten, FaceTracker.font,
-                                                                  FaceTracker.fontScale, FaceTracker.fontThickness)
             cv2.putText(right_half, FaceTracker.whatsWritten,
                         (int((sideHalfSize[1] / 2) - text_width / 2), text_height + 20), FaceTracker.font,
                         FaceTracker.fontScale, (255, 255, 255), FaceTracker.fontThickness, cv2.LINE_AA)
@@ -461,12 +476,6 @@ def showWhatsWritten(theTopFrame,dimensionsTop):
             combined_TopHalf = cv2.hconcat([left_half, mirrored_right_half])
             theTopFrame = cv2.vconcat([combined_TopHalf, bottom_half])
         elif FaceTracker.showWrittenMode.lower()=="CloneAndFlipMirror".lower():
-            left_half = top_half[:, :topHalfSize[1] // 2]  # Left half
-            right_half = top_half[:, topHalfSize[1] // 2:]  # Right half
-            sideHalfSize = left_half.shape
-            # put white text on black background
-            (text_width, text_height), baseline = cv2.getTextSize(FaceTracker.whatsWritten, FaceTracker.font,
-                                                                  FaceTracker.fontScale, FaceTracker.fontThickness)
             cv2.putText(right_half, FaceTracker.whatsWritten,
                         (int((sideHalfSize[1] / 2) - text_width / 2), text_height + 20), FaceTracker.font,
                         FaceTracker.fontScale, (255, 255, 255), FaceTracker.fontThickness, cv2.LINE_AA)
@@ -478,16 +487,28 @@ def showWhatsWritten(theTopFrame,dimensionsTop):
             mirrored_right_half = cv2.flip(mirrored_right_half, 0)
             combined_TopHalf = cv2.hconcat([left_half, mirrored_right_half])
             theTopFrame = cv2.vconcat([combined_TopHalf, bottom_half])
+        elif FaceTracker.showWrittenMode.lower()=="Mirror".lower():
+            cv2.putText(top_half, FaceTracker.whatsWritten,
+                        (int((dimensionsTop[1] / 2) - text_width / 2), text_height + 20), FaceTracker.font,
+                    FaceTracker.fontScale, (255, 255, 255), FaceTracker.fontThickness, cv2.LINE_AA)
+            # Create a mirrored version of the image
+            mirrored_half = cv2.flip(top_half, 1)
+
+            theTopFrame = cv2.vconcat([mirrored_half, bottom_half])
         else:
             #put white text on black background
-            (text_width, text_height), baseline = cv2.getTextSize(FaceTracker.whatsWritten, FaceTracker.font, FaceTracker.fontScale,FaceTracker.fontThickness)
-            cv2.putText(top_half, FaceTracker.whatsWritten, (int((dimensionsTop[1] / 2)-text_width/2), text_height+20), FaceTracker.font, FaceTracker.fontScale, (255, 255, 255), FaceTracker.fontThickness, cv2.LINE_AA)
-            # Create a mirrored version of the image
             mirrored_top_half = cv2.flip(top_half, 1)
             theTopFrame = cv2.vconcat([mirrored_top_half, bottom_half])
-    else:
-        FaceTracker.prettyPrintInCamera(theTopFrame, FaceTracker.whatsWritten, (int(dimensionsTop[1] / 2), 20),
-                                        FaceTracker.redFrameColor, onCenter=True)  # x and y are inverted in call
+    elif FaceTracker.showWrittenMode.lower()=="Single".lower():
+        # put white text on black background
+        cv2.putText(top_half, FaceTracker.whatsWritten,
+                    (int((dimensionsTop[1] / 2) - text_width / 2), text_height + 20), FaceTracker.font,
+                    FaceTracker.fontScale, (255, 255, 255), FaceTracker.fontThickness, cv2.LINE_AA)
+        # Create a mirrored version of the image
+        # mirrored_top_half = cv2.flip(top_half, 1)
+        theTopFrame = cv2.vconcat([top_half, bottom_half])
+    #else:#dont Show anything
+
     return theTopFrame
 
 
@@ -506,12 +527,12 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
             llmCall.start()
             FaceTracker.llmIsWorkingFlag= True
         else:
-
             if FaceTracker.llmWaitTime<=0:
                 theText = f"LLM has been called with \"{FaceTracker.lastWord}\", Calculating Timeframe for future calls"
             else:
                 theText = f"LLM has been called with \"{FaceTracker.lastWord}\", aprox time: {totalTime} seconds out of {FaceTracker.llmWaitTime}"
-            FaceTracker.prettyPrintInCamera(theTopFrame,theText,(int(dimensionsTop[0] / 2), 20), color)
+            FaceTracker.labelsLMM = ["", "", "", "", ""]
+            FaceTracker.prettyPrintInCamera(theTopFrame,theText,(int(dimensionsTop[1] / 2),int(dimensionsTop[0])), color)
 
     if not queue.empty():
         FaceTracker.llmIsWorkingFlag = False
@@ -529,7 +550,9 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
         else:
             warningText=f"LLM: \"{FaceTracker.lastWord}\",aprox {int(totalTime/FaceTracker.llmWaitTime*100)}% done, {int(FaceTracker.llmWaitTime-totalTime)} seconds left"
         #print(dimensionsTop)
-        FaceTracker.prettyPrintInCamera(theTopFrame, warningText,(int(dimensionsTop[1] / 2),dimensionsTop[0]-30 ), FaceTracker.redFrameColor,onCenter=True)#x and y are inverted in call
+        FaceTracker.labelsLMM = ["", "", "", "", ""]
+        (text_width, text_height), baseline = cv2.getTextSize(warningText, FaceTracker.font, FaceTracker.fontScale, FaceTracker.fontThickness)
+        FaceTracker.prettyPrintInCamera(theTopFrame, warningText,(int(dimensionsTop[1] / 2),dimensionsTop[0]+int(text_height*0.4)), FaceTracker.redFrameColor,onCenter=True)#x and y are inverted in call
 
     if FaceTracker.showWritten:
         theTopFrame = showWhatsWritten(theTopFrame,dimensionsTop)
@@ -864,8 +887,9 @@ def GetSelectionLogic(theTopFrame,dimensionsTop,theSelectionCurrentTime,theCurre
                             theSelectionCurrentTime += selectionCurrentTime + 1 / fps
                             desiredText=f'Selection on {(FaceTracker.timeOnLocation-theSelectionCurrentTime):.1f}'
                             #print(desiredText)#topFrame,dimensionsTop,
+                            (text_width, text_height), baseline = cv2.getTextSize(whatsWritten, font, fontScale, fontThickness)
                             FaceTracker.prettyPrintInCamera(theTopFrame, desiredText,
-                                                            (int(dimensionsTop[1] / 2), dimensionsTop[0] - 15),
+                                                            (int(dimensionsTop[1] / 2), int(dimensionsTop[0]+int(text_height*0.4)-(text_height*1.6*2))),#-3 is padding
                                                             FaceTracker.redFrameColor,
                                                             onCenter=True)  # x and y are inverted in call
                         else:  # time has passed

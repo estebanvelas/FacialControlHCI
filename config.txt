@@ -1,4 +1,4 @@
-FacialControlHMI_Version=1.0.11
+FacialControlHMI_Version=1.0.12
 #------------------Menu Selection Variables
 selectionType=TimedOnLocation                   #BackToCenter,TimedOnLocation
 timeOnLocation=1.3                              #seconds needed in location
@@ -28,12 +28,12 @@ showFPS=False                                   #Can be true, useful to see how 
 #------------------UI Options
 showWritten=True                                #Can also be False, will hide what has been written
 maxWhatsWrittenSize=30                          # Max Size of feedback character length (what has been written)
-showWrittenMode=CloneAndFlipMirror              #Options are: Single, Mirror, CloneAndMirror, and CloneAndFlipMirror
+showWrittenMode=CloneAndFlipMirror              #Options are: None, Single, Mirror, CloneAndMirror, and CloneAndFlipMirror
 
 #------------------LLM Config
 llmWaitTime=1
 SeedWord=Hello                                  #Change to whatever word you want to start predictions with
-LlmService=ChatGPT                              #can be replaced with ChatGPT
+LlmService=ChatGPT                              #Options are: Local, ChatGPT
 LlmKey=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
 
 #-------512,126-----------Local LLM Options
