@@ -34,7 +34,7 @@ python main.py
 ```
 Adjust settings in the configuration file (`config.json`) to fine-tune recognition sensitivity. 
 
-##Windows Deployment
+## **Windows Deployment**
 Modify FacialControlHMI.spec with your requirements.
 Run in CMD:
 ```sh
