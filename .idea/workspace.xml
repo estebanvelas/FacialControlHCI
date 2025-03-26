@@ -4,16 +4,21 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="71809359-efcd-4b9a-9589-a5a0d576c04d" name="Changes" comment="Added versioning, new variables to control center zone and automatic versioning when building.">
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+    <list default="true" id="71809359-efcd-4b9a-9589-a5a0d576c04d" name="Changes" comment="created Database CSV_2_comments.py">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/FaceTracker.py" beforeDir="false" afterPath="$PROJECT_DIR$/FaceTracker.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FacialControlHMI.spec" beforeDir="false" afterPath="$PROJECT_DIR$/FacialControlHMI.spec" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/config.txt" beforeDir="false" afterPath="$PROJECT_DIR$/config.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ChangesViewManager">
+    <option name="groupingKeys">
+      <option value="directory" />
+    </option>
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
@@ -30,7 +35,6 @@
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
     <option name="SIGN_OFF_COMMIT" value="true" />
-    <option name="UPDATE_TYPE" value="REBASE" />
   </component>
   <component name="GitHubPullRequestSearchHistory">{
   &quot;lastFilter&quot;: {
@@ -59,16 +63,73 @@
   <component name="PropertiesComponent">{
   &quot;keyToString&quot;: {
     &quot;Python.FaceTracker.executor&quot;: &quot;Run&quot;,
+    &quot;Python.testBed.executor&quot;: &quot;Run&quot;,
     &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
     &quot;settings.editor.selected.configurable&quot;: &quot;com.intellij.pycharm.community.ide.impl.configuration.PythonContentEntriesConfigurable&quot;
+  },
+  &quot;keyToStringList&quot;: {
+    &quot;ChangesTree.GroupingKeys&quot;: []
   }
 }</component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="C:\Users\evelasquez\PycharmProjects\FacialControlHCI" />
     </key>
+  </component>
+  <component name="RunManager" selected="Python.DatabaseCSV_2_comments">
+    <configuration name="DatabaseCSV_2_comments" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="FacialControlHCI" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="C:\Users\velas\PycharmProjects\FacialControlHCI\DatabaseCSV_2_comments.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="FaceTracker" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="FacialControlHCI" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/FaceTracker.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python.DatabaseCSV_2_comments" />
+        <item itemvalue="Python.FaceTracker" />
+      </list>
+    </recent_temporary>
   </component>
   <component name="SharedIndexes">
     <attachedChunks>
@@ -194,7 +255,71 @@
       <option name="project" value="LOCAL" />
       <updated>1731102392245</updated>
     </task>
-    <option name="localTasksCounter" value="16" />
+    <task id="LOCAL-00016" summary="Added versioning, new variables to control center zone and automatic versioning when building.">
+      <option name="closed" value="true" />
+      <created>1734151399527</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1734151399527</updated>
+    </task>
+    <task id="LOCAL-00017" summary="added new tracking method (waitTime).&#10;added 2 new control variables.&#10;updated comments when showing GUI.">
+      <option name="closed" value="true" />
+      <created>1739133340881</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1739133340881</updated>
+    </task>
+    <task id="LOCAL-00018" summary="Updated FaceTracker to include floating numbers in waittime&#10;fixed bug in font size not working on pretty print">
+      <option name="closed" value="true" />
+      <created>1740599751057</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1740599751057</updated>
+    </task>
+    <task id="LOCAL-00019" summary="fixed bug where mouse controls needed time. Created selection logic unique to mouse">
+      <option name="closed" value="true" />
+      <created>1740603992444</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1740603992444</updated>
+    </task>
+    <task id="LOCAL-00020" summary="Created new mirror subsystem:CloneAndFlipMirror">
+      <option name="closed" value="true" />
+      <created>1740673833147</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1740673833147</updated>
+    </task>
+    <task id="LOCAL-00021" summary="Added Spec file with multiple PC configurations">
+      <option name="closed" value="true" />
+      <created>1740674918051</created>
+      <option name="number" value="00021" />
+      <option name="presentableId" value="LOCAL-00021" />
+      <option name="project" value="LOCAL" />
+      <updated>1740674918051</updated>
+    </task>
+    <task id="LOCAL-00022" summary="Fixed bugs: Change in font scale would overlap msgs&#10;fixed mirror methods&#10;Updated size of string functions">
+      <option name="closed" value="true" />
+      <created>1740758395181</created>
+      <option name="number" value="00022" />
+      <option name="presentableId" value="LOCAL-00022" />
+      <option name="project" value="LOCAL" />
+      <updated>1740758395181</updated>
+    </task>
+    <task id="LOCAL-00023" summary="created Database CSV_2_comments.py">
+      <option name="closed" value="true" />
+      <created>1742225986385</created>
+      <option name="number" value="00023" />
+      <option name="presentableId" value="LOCAL-00023" />
+      <option name="project" value="LOCAL" />
+      <updated>1742225986385</updated>
+    </task>
+    <option name="localTasksCounter" value="24" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -223,6 +348,13 @@
     <MESSAGE value=" Show written was added with mirror and CloneAndMirror support" />
     <MESSAGE value=" Install not working. Researching hooks for llama_cpp." />
     <MESSAGE value="Added versioning, new variables to control center zone and automatic versioning when building." />
-    <option name="LAST_COMMIT_MESSAGE" value="Added versioning, new variables to control center zone and automatic versioning when building." />
+    <MESSAGE value="added new tracking method (waitTime).&#10;added 2 new control variables.&#10;updated comments when showing GUI." />
+    <MESSAGE value="Updated FaceTracker to include floating numbers in waittime&#10;fixed bug in font size not working on pretty print" />
+    <MESSAGE value="fixed bug where mouse controls needed time. Created selection logic unique to mouse" />
+    <MESSAGE value="Created new mirror subsystem:CloneAndFlipMirror" />
+    <MESSAGE value="Added Spec file with multiple PC configurations" />
+    <MESSAGE value="Fixed bugs: Change in font scale would overlap msgs&#10;fixed mirror methods&#10;Updated size of string functions" />
+    <MESSAGE value="created Database CSV_2_comments.py" />
+    <option name="LAST_COMMIT_MESSAGE" value="created Database CSV_2_comments.py" />
   </component>
 </project>

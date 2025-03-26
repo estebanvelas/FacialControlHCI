@@ -1,3 +1,22 @@
+'''
+Copyright (C) [2025] [Esteban Velasquez Toro]
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+'''
+
+
 # -*- mode: python ; coding: utf-8 -*-
 import shutil
 import re
@@ -30,6 +49,7 @@ if hostname =="DELIA":#Laptop
         optimize=0,
     )
 else:
+    print(f'PC name is: {hostname}')
     a = Analysis(
         ['FaceTracker.py'],
         pathex=[],
@@ -37,8 +57,9 @@ else:
         datas=[('./venvFacialControl/Lib/site-packages/llama_cpp', '.'),
             ('./venvFacialControl/Lib/site-packages/llama_cpp/lib', '.'),
             ('./venvFacialControl/Lib/site-packages/llama_cpp/lib/llama.dll', '.'),
-            ('./venvFacialControl/Lib/site-packages/mediapipe', '.')],#'mediapipe/'
-        hiddenimports=['mediapipe','mediapipe.python._framework_bindings', 'cv2'],
+            ('./config.txt', '.'),
+            ('./venvFacialControl/Lib/site-packages/mediapipe', 'mediapipe/')],#('./venvFacialControl/Lib/site-packages/mediapipe', '.')]
+        hiddenimports=[],#'mediapipe','mediapipe.python._framework_bindings', 'cv2'
         hookspath=['./hooks hook-llama_cpp.py'],
         hooksconfig={},
         runtime_hooks=[],
@@ -48,12 +69,12 @@ else:
     )
 
     #mediapipe tree
-    mediapipe_tree = Tree(get_mediapipe_path(), prefix='mediapipe', excludes=["*.pyc"])
-    a.datas += mediapipe_tree
+    #mediapipe_tree = Tree(get_mediapipe_path(), prefix='mediapipe', excludes=["*.pyc"])
+    #a.datas += mediapipe_tree
     #print(f"mediapipe Tree: \n\n\n{mediapipe_tree}")
-    a.binaries = filter(lambda x: 'mediapipe' not in x[0], a.binaries)
+    #a.binaries = filter(lambda x: 'mediapipe' not in x[0], a.binaries)
 
-    print(f"The name of the PC is: {hostname}")
+
 pyz = PYZ(a.pure)
 
 def changeVersion():

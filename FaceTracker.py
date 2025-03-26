@@ -1,3 +1,21 @@
+'''
+Copyright (C) [2025] [Esteban Velasquez Toro]
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+'''
+
 import math
 import os
 import re
@@ -11,6 +29,7 @@ import time
 import sys
 import json
 from llama_cpp import Llama
+import openai
 from openai import OpenAI
 import numpy as np
 #from numpy.array_api import astype
@@ -405,18 +424,40 @@ def getLLM(queue,LlmService,LlmKey,lastWord):
 
     if LlmService=="ChatGPT" and is_connected():
         #print("Calling ChatGPT: ")
-        client = OpenAI(api_key=LlmKey)
-        session = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[{
-                "role": "user",
-                "content": prompt
-            }]
-        )
-        response = session.choices[0].message.content
-        print (f"response: \n {response}")
-        reply = re.sub(r'\d+\.?\s*', '', response) #r means raw string, \d matches digits, \.? matches literal dot, ? means optional, \s matches whitespace
-        result=reply.splitlines()
+        try:
+            client = OpenAI(api_key=LlmKey)
+            session = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[{
+                    "role": "user",
+                    "content": prompt
+                }]
+            )
+            response = session.choices[0].message.content
+            print (f"response: \n {response}")
+            reply = re.sub(r'\d+\.?\s*', '', response) #r means raw string, \d matches digits, \.? matches literal dot, ? means optional, \s matches whitespace
+            result=reply.splitlines()
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            try:
+                # Try fetching available models to verify the API key
+                response = client.models.list()
+                print("API key is valid! ✅")
+            except openai.AuthenticationError:
+                print("Invalid API key. ❌")
+            except Exception as e:
+                print(f"An error occurred: {e}")
+
+            print(f"Changing mode to local LLM")
+            FaceTracker.llmService="Local"
+            prompt = generate_prompt_from_template(prompt)
+            print("calling local LLM: ")
+            llm = loadLLM("zephyr-7b-beta.Q4_K_M.gguf", llmContextSize, llmBatchSize)
+            generatedText = generate_text(llm, prompt)
+            generatedText = re.sub(r'\d+\.?\s*', '', generatedText)
+            # print(f"generated Text: {generatedText}")
+            result = generatedText.splitlines()
+            # print(f"generated Text: {FaceTracker.labelsLMM}")
     else:
         prompt = generate_prompt_from_template(prompt)
         print("calling local LLM: ")
