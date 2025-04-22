@@ -158,7 +158,7 @@ def generate_text(
 
 def changeLlmWaitTime(theTime):
     # Read all lines from the file
-    timeLine=f"llmWaitTime={theTime}"
+    timeLine=f"llmWaitTime={theTime}\t\t\t\t\t\t\t\t\t###Average time per call to LLM service"
 
     with open(configFilePath, 'r') as file:
         lines = file.readlines()
@@ -220,7 +220,7 @@ def GetConfigSettings():
                 continue  # Skip comments and empty lines
 
             key, value = line.strip().split('=',1)
-            value = value.split('#', 1)[0].strip()
+            value = value.split('###', 1)[0].strip()
             if key == "selectionType":
                 selectionType = value
             elif key == "ignoreGuiAngles":
@@ -717,7 +717,7 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
                     if len(theprevCreatedLabelsList) >= 2:
                         theCreatedLabelList=theprevCreatedLabelsList.pop()
                         theCreatedLabelList = ''.join(filter(None, theCreatedLabelList))
-                        print(f'thePop: {theCreatedLabelList}')
+                        #print(f'thePop: {theCreatedLabelList}')
                     else:
                         if theCurrentSelection[1]=="MultipleLetters":
                             theCreatedLabelList=thelabelsABC
@@ -765,7 +765,7 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
                 theCreatedLabelList, theCurrentSelection = GetCharacterDivisionMenu(
                     theCreatedLabelList[selectedFromListIndex], totalN, theTopFrame,theCurrentSelection,centerOfContours,color,lettersColor,thefontScale,thefontThickness)
 
-            print(f'the actual and prev created label lists: {theCreatedLabelList}, {theprevCreatedLabelsList}')
+            #print(f'the actual and prev created label lists: {theCreatedLabelList}, {theprevCreatedLabelsList}')
             theCurrentSelection[0] = -1
         elif(theCurrentSelection[1]=="Quick"):#"LLM","BackSpace","Back"
             DisplayOtherMenus(thelabelsQuick, labelsQuickOptions,totalN, theTopFrame,centerOfContours,color,thefontScale,thefontThickness)
