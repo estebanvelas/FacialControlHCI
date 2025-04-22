@@ -63,4 +63,4 @@ LlmKey=Put_key_here
 #-------512,126-----------Local LLM Options
 llmContextSize=128                               #how many previous tokens will be considered in a local LLM. For performance, default value is 32
 llmBatchSize=32                                 #How many tokens can be ran through on a batch. For performance, default value is 32
-llmWaitTime=1745335096
+llmWaitTime=1745345208

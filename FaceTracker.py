@@ -55,7 +55,7 @@ imageOrVideo = True
 
 #------------------
 labelsMainMenu=["Quick", "BackSpace","LLM","Space","Mouse", "ABC","Numbers","Special Chars"]
-labelsLettersMenu=["Quick", "BackSpace", "Back"]
+labelsLettersMenu=["Back", "BackSpace", "Main Menu"]
 #------------------
 #------------------
 labelsMouseMenu=["Click","Back","Double Click","RightClick"]
@@ -571,7 +571,7 @@ def showWhatsWritten(theTopFrame,dimensionsTop,thewhatsWritten, thefont,thefontS
     return theTopFrame
 
 
-def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabelList,centerOfContours,color,
+def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabelList,theprevCreatedLabelsList,centerOfContours,color,
                   lettersColor,dimensionsTop,theshowFPS,thestartTime,thelastWord,theprevLastWord,thellmIsWorkingFlag,
                   theLlmService,theLlmKey,thellmWaitTime,thefont, thefontScale, thefontThickness,theredFrameColor,
                   thewhatsWritten,thefps,thelabelsLMM,theSeedWord,thelabelsQuick,thelabelsABC,thelabelsNumbers,thelabelsSpecial,
@@ -581,9 +581,6 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
                     fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=0.5, color=(0, 255, 0), thickness=2)
     endTime = time.time()
     totalTime = math.ceil(endTime - thestartTime)
-
-
-
 
     if thellmIsWorkingFlag:
         if thellmWaitTime<=0:
@@ -650,13 +647,11 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
             elif theCurrentSelection[0] == 5:#ABC
                 print(f"Letters Menu: {thelabelsABC}")
                 theCurrentSelection = [-1,"MultipleLetters"]
-                theCreatedLabelList = thelabelsABC
                 theCreatedLabelList, theCurrentSelection = GetCharacterDivisionMenu(
                     thelabelsABC, totalN, theTopFrame, theCurrentSelection,centerOfContours,color,lettersColor,thefontScale,thefontThickness)
             elif theCurrentSelection[0] == 6:  # Numbers
                 print(f"Letters Menu: {thelabelsNumbers}")
                 theCurrentSelection = [-1,"MultipleNumbers"]
-                theCreatedLabelList = thelabelsNumbers
                 theCreatedLabelList, theCurrentSelection = GetCharacterDivisionMenu(
                     thelabelsNumbers, totalN, theTopFrame, theCurrentSelection,centerOfContours,color,lettersColor,thefontScale,thefontThickness)
             elif theCurrentSelection[0] == 7:#Special Characters
@@ -706,7 +701,7 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
 
             #print(f"label list 1: {theCreatedLabelList}")
             if theCurrentSelection[1]== -1:
-                return theCurrentSelection,theCreatedLabelList
+                return theCurrentSelection,theCreatedLabelList, theTopFrame,thelastWord,thelabelsLMM,thewhatsWritten
             elif (theCreatedLabelList[0]=="" and theCurrentSelection[1]=="MultipleLetters"):
                 theCreatedLabelList=thelabelsABC
             elif (theCreatedLabelList[0]=="" and theCurrentSelection[1]=="MultipleNumbers"):
@@ -714,10 +709,27 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
             elif (theCreatedLabelList[0]=="" and theCurrentSelection[1]=="MultipleSpecialChars"):
                 theCreatedLabelList=thelabelsSpecial
 
+            sizeOfLabelText = len(theCreatedLabelList[theCurrentSelection[0] - len(labelsLettersMenu)])
             #when selecting the letter menu
-            if theCurrentSelection[0]==0:#"Quick", "", ""]
-                theCurrentSelection = [-1, "Quick"]
-                print("menu: "+str(labelsMainMenu[theCurrentSelection[0]]))
+            if theCurrentSelection[0]==0:#["Back", "BackSpace", "Main Menu"]
+                #theCurrentSelection = [-1, "Back"]
+                if theprevCreatedLabelsList:
+                    if len(theprevCreatedLabelsList) >= 2:
+                        theCreatedLabelList=theprevCreatedLabelsList.pop()
+                        theCreatedLabelList = ''.join(filter(None, theCreatedLabelList))
+                        print(f'thePop: {theCreatedLabelList}')
+                    else:
+                        if theCurrentSelection[1]=="MultipleLetters":
+                            theCreatedLabelList=thelabelsABC
+                        elif  theCurrentSelection[1] == "MultipleNumbers":
+                            theCreatedLabelList = thelabelsNumbers
+                        elif theCurrentSelection[1] == "MultipleSpecialChars":
+                            theCreatedLabelList = thelabelsSpecial
+                    theCreatedLabelList, theCurrentSelection = GetCharacterDivisionMenu(
+                        theCreatedLabelList, totalN, theTopFrame, theCurrentSelection, centerOfContours, color,
+                        lettersColor, thefontScale, thefontThickness)
+                    theCurrentSelection[0] = -1
+                #print("menu: "+str(labelsMainMenu[theCurrentSelection[0]]))
             elif theCurrentSelection[0] == 1:#BackSpace
                 theCurrentSelection[0] = -1
                 print("pressed: Backspace")
@@ -726,11 +738,12 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
                 if len(thewhatsWritten)>0:
                     thewhatsWritten = thewhatsWritten[:-1]
             elif theCurrentSelection[0] == 2:#Back
+                theprevCreatedLabelsList.clear()
                 theCurrentSelection = [-1,"MainMenu"]
 
             #when selecting a letter or group of letters
-            sizeOfLabelText=len(theCreatedLabelList[theCurrentSelection[0] - len(labelsLettersMenu)])
-            if(sizeOfLabelText==1):
+
+            elif(sizeOfLabelText==1):
                 #print(f"currentSelectionId,labelsLettersMenu,pressed: {theCurrentSelection[0]},{labelsLettersMenu}, {str(theCreatedLabelList[theCurrentSelection[0] - len(labelsLettersMenu)])}")
                 DisplayCharactersMenu(theCreatedLabelList, totalN, theTopFrame, theCurrentSelection,centerOfContours,color,thefontScale,thefontThickness)
                 if (str(theCreatedLabelList[theCurrentSelection[0] - len(labelsLettersMenu)]))=='_':
@@ -747,9 +760,12 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
                 selectedFromListIndex=theCurrentSelection[0] - len(labelsLettersMenu)
                 if(selectedFromListIndex<0):
                     selectedFromListIndex=0
+                theprevCreatedLabelsList.append(theCreatedLabelList)
                 #print(f"label list 2: {theCreatedLabelList}, selected from list: {selectedFromListIndex}")
                 theCreatedLabelList, theCurrentSelection = GetCharacterDivisionMenu(
                     theCreatedLabelList[selectedFromListIndex], totalN, theTopFrame,theCurrentSelection,centerOfContours,color,lettersColor,thefontScale,thefontThickness)
+
+            print(f'the actual and prev created label lists: {theCreatedLabelList}, {theprevCreatedLabelsList}')
             theCurrentSelection[0] = -1
         elif(theCurrentSelection[1]=="Quick"):#"LLM","BackSpace","Back"
             DisplayOtherMenus(thelabelsQuick, labelsQuickOptions,totalN, theTopFrame,centerOfContours,color,thefontScale,thefontThickness)
@@ -820,7 +836,7 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
         print(f"LLM Call took: {totalTime} seconds")
         thelabelsLMM = result
 
-    return theCurrentSelection,theCreatedLabelList, theTopFrame,thelastWord,thelabelsLMM,thewhatsWritten
+    return theCurrentSelection,theCreatedLabelList,theprevCreatedLabelsList, theTopFrame,thelastWord,thelabelsLMM,thewhatsWritten
 
 def DisplayMouseMenu(theLabelsList,theLabelsOptions,totalN,theTopFrame,centerOfContours,color,thefontScale,thefontThickness):
     for i in range(totalN):
@@ -1024,6 +1040,7 @@ def mainLoop(queue):
     theprev_frame_time = 0
     thefps = 0
     thecreatedLabelsList = createdLabelsList
+    theprevCreatedLabelsList=createdLabelsList
     theselected=-1
     theprevSelected=theselected
     theselectionCurrentTime=selectionCurrentTime
@@ -1117,8 +1134,8 @@ def mainLoop(queue):
                         # create the n zones for buttons, geometry must be created by placing points in clockwise order
                         # -------------------------
                         ellipsePoly,contours,centerOfContours=GetGUI(uiFrame,radiusAsPercentageX,radiusAsPercentageY,thetotalOptionsN,centerOfFaceX,centerOfFaceY,nosePosition,theignoreGuiAngles,theignoreAngleArc)
-                        thecurrentSelection,thecreatedLabelsList,topFrame,thelastWord,thelabelsLMM,thewhatsWritten = GetMenuSystem (queue,topFrame,thetotalOptionsN,
-                                                                                            thecurrentSelection,thecreatedLabelsList,
+                        thecurrentSelection,thecreatedLabelsList,theprevCreatedLabelsList,topFrame,thelastWord,thelabelsLMM,thewhatsWritten = GetMenuSystem (queue,topFrame,thetotalOptionsN,
+                                                                                            thecurrentSelection,thecreatedLabelsList,theprevCreatedLabelsList,
                                                                                             centerOfContours,color,lettersColor,dimensionsTop,theshowFPS,thestartTime,
                                                                                             thelastWord,theprevLastWord,thellmIsWorkingFlag,
                                                                                             theLlmService, theLlmKey,
