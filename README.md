@@ -1,7 +1,3 @@
-Here’s the **README.md** with the **GPL v3** license applied:  
-
----
-
 # **FacialControlHCI**  
 A facial gesture-based control system for Human-Computer Interaction (HCI).  
 
@@ -36,7 +32,14 @@ Run the facial control system:
 ```sh
 python main.py
 ```
-Adjust settings in the configuration file (`config.json`) to fine-tune recognition sensitivity.  
+Adjust settings in the configuration file (`config.json`) to fine-tune recognition sensitivity. 
+
+## **Windows Deployment**
+Modify FacialControlHMI.spec with your requirements.
+Run in CMD:
+```sh
+pyinstaller FacialControlHMI.spec
+```
 
 ## **Contributing**  
 We welcome contributions! Feel free to submit **issues**, create **pull requests**, or suggest improvements.  
