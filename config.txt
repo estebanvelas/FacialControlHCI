@@ -14,7 +14,10 @@
 #    along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 FacialControlHMI_Version=1.0.13
+
 #------------------Menu Selection Variables
+ignoreGuiAngles=90                              #list of angles not to be used: 0 being from center to right, and going positive clockwise
+ignoreAngleArc=140                              #how much to ignore by
 selectionType=TimedOnLocation                   #BackToCenter,TimedOnLocation
 timeOnLocation=1.3                              #seconds needed in location
 centerSizePercentageX=25                        #Percentage of face x
@@ -36,10 +39,16 @@ labelsQuick=Yes,No,Not Sure,Food,Bathroom,Hot,Cold,Hurts    # Make this list com
 fontScale=0.6                                   #modify as needed, I prefer a default value of 0.4
 fontThickness=1                                 #modify as needed, I prefer a default value of 1
 
+#------------------Text-To-Speech Options
+ttsRate=150                                     #modify as needed, I prefer a default value of 150 wpm
+ttsVolume=0.9                                   #modify as needed, I prefer a default value of 0.9
+ttsVoiceType=Female                             #Possible options are: Male, Female
+
 #------------------Camera Options
 camSizeX=640                                    #Good default is 640 to decrease performance requirements
 camSizeY=480                                    #Good default is 480 to decrease performance requirements
 showFPS=False                                   #Can be true, useful to see how the software operates on your system
+
 #------------------UI Options
 showWritten=True                                #Can also be False, will hide what has been written
 maxWhatsWrittenSize=30                          # Max Size of feedback character length (what has been written)
@@ -48,10 +57,10 @@ showWrittenMode=CloneAndFlipMirror              #Options are: None, Single, Mirr
 #------------------LLM Config
 llmWaitTime=1
 SeedWord=Hello                                  #Change to whatever word you want to start predictions with
-LlmService=ChatGPT                              #Options are: Local, ChatGPT
-LlmKey=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
+LlmService=Local                                #Options are: Local, ChatGPT
+LlmKey=Put_key_here
 
 #-------512,126-----------Local LLM Options
-llmContextSize=32                               #how many previous tokens will be considered in a local LLM. For performance, default value is 32
+llmContextSize=128                               #how many previous tokens will be considered in a local LLM. For performance, default value is 32
 llmBatchSize=32                                 #How many tokens can be ran through on a batch. For performance, default value is 32
-llmWaitTime=6
+llmWaitTime=1745335096

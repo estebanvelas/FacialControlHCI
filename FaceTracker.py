@@ -37,8 +37,8 @@ import numpy as np
 import pynput
 from pynput.keyboard import Key, Controller as keyController
 from pynput.mouse import Button, Controller as mouseController
-
-import FaceTracker
+import pyttsx3
+from sympy import false, trunc
 
 #bugs: not working AI, Nonetype exception. Numbers dont work
 
@@ -47,22 +47,12 @@ import FaceTracker
 keyboard = keyController()# Controller()
 mouse = mouseController()
 
+#TTS engine
+TTSengine = pyttsx3.init()
+
 #video settings
 imageOrVideo = True
 
-#fps variables
-fps=30
-speedFps=0
-prevFps=0
-prev_frame_time=0
-new_frame_time=0
-
-#menu selection variables
-selectionType='TimedOnLocation'                   #BackToCenter,TimedOnLocation
-timeOnLocation=3
-totalOptionsN = 8
-mouseSpeed=5
-selectionWaitTime=0.4
 #------------------
 labelsMainMenu=["Quick", "BackSpace","LLM","Space","Mouse", "ABC","Numbers","Special Chars"]
 labelsLettersMenu=["Quick", "BackSpace", "Back"]
@@ -81,45 +71,40 @@ configFilePath='./config.txt'
 #menu selection init hidden variables
 createdLabelsList=[]
 selectionCurrentTime=0
-currentSelection=[-1,"MainMenu"]#first is option chosen, second is how deep
-selected = -1
-prevSelected = -1
-lastWord=""
-prevLastWord=" "
-showFPS=False
-showWritten=False
 
 #menu selection config file init variables
-totalOptionsN = 8
-mouseSpeed = 5
-selectionWaitTime = 0.4
-labelsABC = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-labelsNumbers="0123456789"
-labelsSpecial="`~!@#$%^&*()-_\"+[]\;',./<>?:{}="
-labelsQuick = ["Yes", "No", "Not Sure", "Food", "Bathroom", "Hot", "Cold", "Hurts"]
-fontScale = 0.4
-fontThickness = 1
-camSizeX = 640
-camSizeY = 640
-showFPS =False
-showWritten=False
-llmContextSize=512
-llmBatchSize=126
-llmWaitTime=0
-startTime=0
-llmIsWorkingFlag=False
-whatsWritten=""
-maxWhatsWrittenSize=20
-showWrittenMode="Single"
-seedWord="Emotions"
-LlmService="Local"
-LlmKey=""
+
+seedWord="Welcome "
 
 #ui variables
 greenFrameColor = (0, 255, 0)  # BGR
 redFrameColor = (0, 0, 255)  # BGR
 alpha = 0.3
 font=cv2.FONT_HERSHEY_SIMPLEX
+
+
+def speak(text,thettsRate, thettsVolume, thettsVoiceType,):
+    engine = pyttsx3.init()
+
+    engine.setProperty('rate', thettsRate)
+    engine.setProperty('volume', thettsVolume)
+    voices = engine.getProperty('voices')
+    for i, voice in enumerate(voices):
+        print(f"Voice {i}: {voice.name} - {voice.id}")
+    if "female" in thettsVoiceType:
+        desiredVoiceId = 1
+    else:
+        desiredVoiceId = 0
+
+    engine.setProperty('voice', voices[desiredVoiceId].id)
+
+    engine.say(text)
+    engine.runAndWait()
+
+def speak_non_blocking(text,thettsRate, thettsVolume, thettsVoiceType,):
+    p = multiprocessing.Process(target=speak, args=(text,thettsRate, thettsVolume, thettsVoiceType,))
+    p.start()
+    return p  # Return the process in case you want to track or terminate it
 
 def is_connected():
     try:
@@ -148,7 +133,7 @@ def getAllGuffModels(directory):
 def loadLLM(thePath,contextSize=512,batchSize=126):
     sortedPaths=getAllGuffModels("./")
     print(f"sortedPaths: {sortedPaths}")
-    theLLM = Llama(model_path=sortedPaths[0], n_ctx=contextSize, n_batch=batchSize,use_gpu=True)
+    theLLM = Llama(model_path=sortedPaths[0], n_ctx=contextSize, n_batch=batchSize,n_gpu_layers=30, use_gpu=True)
     return theLLM
 
 def generate_text(
@@ -196,6 +181,11 @@ You are a helpful chatbot.<|im_end|>
 def GetConfigSettings():
     selectionType='BackToCenter'
     timeOnLocation=3
+    ttsRate = 150  # modify as needed, I prefer a default value of 150 wpm
+    ttsVolume = 0.9  # modify as needed, I prefer a default value of 0.9
+    ttsVoiceType = 'Female'  # Possible options are: Male, Female
+    ignoreGuiAngles = 270  # list of angles not to be used
+    ignoreAngleArc = 30
     centerSizePercentageX=20
     centerSizePercentageY=20
     offsetPercentageX = 0
@@ -233,95 +223,80 @@ def GetConfigSettings():
             value = value.split('#', 1)[0].strip()
             if key == "selectionType":
                 selectionType = value
-                FaceTracker.selectionType=selectionType
+            elif key == "ignoreGuiAngles":
+                ignoreGuiAngles = value.split(',')
+            elif key == "ignoreAngleArc":
+                ignoreAngleArc = float(value)
+            elif key == "ttsRate":
+                ttsRate = float(value)
+            elif key == "ttsVolume":
+                ttsVolume = float(value)
+            elif key == "ttsVoiceType":
+                ttsVoiceType = str(value).lower()
             elif key == "timeOnLocation":
                 timeOnLocation = float(value)
-                FaceTracker.timeOnLocation=timeOnLocation
             elif key == "centerSizePercentageX":
                 centerSizePercentageX = int(value)
-                FaceTracker.centerSizePercentageX=centerSizePercentageX
             elif key == "centerSizePercentageY":
                 centerSizePercentageY = int(value)
-                FaceTracker.centerSizePercentageY=centerSizePercentageY
             elif key == "offsetPercentageX":
                 offsetPercentageX = int(value)
-                FaceTracker.offsetPercentageX=offsetPercentageX
             elif key == "offsetPercentageY":
                 offsetPercentageY = int(value)
-                FaceTracker.offsetPercentageY=offsetPercentageY
             elif key == "totalOptionsN":
                 totalOptionsN = int(value)
-                FaceTracker.totalOptionsN=totalOptionsN
             elif key == "mouseSpeed":
                 mouseSpeed = int(value)
-                FaceTracker.mouseSpeed=mouseSpeed
             elif key == "selectionWaitTime":
                 selectionWaitTime = float(value)
-                FaceTracker.selectionWaitTime=selectionWaitTime
             elif key == "labelsABC":
                 labelsABC = value
-                FaceTracker.labelsABC=labelsABC
             elif key == "labelsNumbers":
                 labelsNumbers = value
-                FaceTracker.labelsNumbers=labelsNumbers
             elif key == "labelsSpecial":
                 labelsSpecial = value
-                FaceTracker.labelsSpecial=labelsSpecial
             elif key == "labelsQuick":
                labelsQuick = value.split(',')
-               FaceTracker.labelsQuick=labelsQuick
             elif key == "fontScale":
                 fontScale = float(value)
-                FaceTracker.fontScale=fontScale
             elif key == "fontThickness":
                 fontThickness = int(value)
-                FaceTracker.fontThickness=fontThickness
             elif key == "camSizeX":
                 camSizeX = int(value)
-                FaceTracker.camSizeX=camSizeX
             elif key == "camSizeY":
                 camSizeY = int(value)
-                FaceTracker.camSizeY=camSizeY
             elif key == "showFPS":
                 if value == "False" or value == "False" or value == "0":
                     value=""
                 showFPS = bool(value)
-                FaceTracker.showFPS=showFPS
             elif key == "showWritten":
                 if value == "False" or value == "false" or value == "0"or value == "f" or value == "F":
                     value=""
                 showWritten = bool(value)
-                FaceTracker.showWritten=showWritten
             elif key == "llmContextSize":
                 llmContextSize = int(value)
-                FaceTracker.llmContextSize=llmContextSize
             elif key == "llmBatchSize":
                 llmBatchSize = int(value)
-                FaceTracker.llmBatchSize=llmBatchSize
             elif key == "llmWaitTime":
                 llmWaitTime = int(value)
-                FaceTracker.llmWaitTime = llmWaitTime
             elif key == "maxWhatsWrittenSize":
                 maxWhatsWrittenSize = int(value)
-                FaceTracker.maxWhatsWrittenSize = maxWhatsWrittenSize
             elif key == "showWrittenMode":
                 showWrittenMode = value
-                FaceTracker.showWrittenMode = showWrittenMode
             elif key == "SeedWord":
                 SeedWord = value
-                FaceTracker.SeedWord = SeedWord
             elif key == "LlmService":
                 LlmService = value
-                FaceTracker.LlmService = LlmService
             elif key == "LlmKey":
                 LlmKey = value
-                FaceTracker.LlmKey = LlmKey
 
 
     # Print the variables
     print(f"selectionType: {selectionType} \n"
           f", timeOnLocation: {timeOnLocation} \n"
-          f", offsetPercentageY: ({offsetPercentageX},{offsetPercentageY}), \n"
+          f", ignoreGuiAngles,ignoreAngleArc: ({ignoreGuiAngles}),{ignoreAngleArc}"
+          f", ttsRate,ttsVolume,ttsVoiceType: ({ttsRate},{ttsVolume},{ttsVoiceType})"
+          f", offsetPercentage: ({offsetPercentageX},{offsetPercentageY}), \n"
           f", totalOptionsN: {totalOptionsN}, mouseSpeed: {mouseSpeed}, selectionWaitTime: {selectionWaitTime}\n"
           f", labelsABC: {labelsABC}, labelsQuick: {labelsQuick}, \n"
           f", fontScale: {fontScale}, fontThickness: {fontThickness}, camSizeX: {camSizeX}, camSizeY: {camSizeY}\n"
@@ -329,48 +304,92 @@ def GetConfigSettings():
           f", llmContextSize: {llmContextSize}, llmBatchSize: {llmBatchSize}, llmWaitTime: {llmWaitTime}\n"
           f", maxWhatsWrittenSize: {maxWhatsWrittenSize}, showWrittenMode: {showWrittenMode}\n"
           f", seedWord: {seedWord}, LlmService: {LlmService}, LlmKey: {LlmKey}\n")
-    return (selectionType,timeOnLocation,centerSizePercentageX,centerSizePercentageY,offsetPercentageX,offsetPercentageY,totalOptionsN,mouseSpeed,selectionWaitTime,labelsABC,labelsNumbers,labelsSpecial,labelsQuick,fontScale\
+    return (selectionType,timeOnLocation,ignoreGuiAngles,ignoreAngleArc,ttsRate,ttsVolume,ttsVoiceType,centerSizePercentageX,centerSizePercentageY,offsetPercentageX,offsetPercentageY,totalOptionsN,mouseSpeed,selectionWaitTime,labelsABC,labelsNumbers,labelsSpecial,labelsQuick,fontScale\
         ,fontThickness,camSizeX,camSizeY, showFPS, showWritten,llmContextSize,llmBatchSize,llmWaitTime
             ,maxWhatsWrittenSize,showWrittenMode,seedWord,LlmService,LlmKey)
 
-def GetAreaPoints(totalN,centerOfFaceX,centerOfFaceY,areaSize, rotationAngle):
-    #(0,0) being center of face
-    #m=rise/run
-    #y=mx+b
-    #x=(y-b)/m
-    degreesOfEach = math.radians(360/(totalN))
-    contours=[]
-    centerOfContours=[]
+def GetAreaPoints(totalN, centerOfFaceX, centerOfFaceY, areaSize, theignoreGuiAngles, theignoreAngleArc, offsetAngleDeg=-15):
+    # Ensure theignoreGuiAngles is a list
+    if not isinstance(theignoreGuiAngles, list):
+        theignoreGuiAngles = [theignoreGuiAngles]
 
-    for i in range(0,totalN,1):
-        #get contour endpoints for drawing the contour
-        x1 = centerOfFaceX + (math.cos(degreesOfEach * i))*areaSize
-        y1 = centerOfFaceY + (math.sin(degreesOfEach * i))*areaSize
-        x2 = centerOfFaceX + (math.cos(degreesOfEach * (i+1)))*areaSize
-        y2 = centerOfFaceY + (math.sin(degreesOfEach * (i+1)))*areaSize
+    ignore_arcs = []
+    for angle in theignoreGuiAngles:
+        center = float(angle) % 360
+        half_arc = theignoreAngleArc / 2
+        start = center - half_arc
+        end = center + half_arc
+        ignore_arcs.append((start, end))
 
-        #rotate endpoints by rotationAngle around the origin:
-        rotatedX1 = ((x1-centerOfFaceX)*math.cos(math.radians(rotationAngle)))-((y1-centerOfFaceY)*math.sin(math.radians(rotationAngle)))+centerOfFaceX
-        rotatedY1 = ((x1-centerOfFaceX) * math.sin(math.radians(rotationAngle))) + ((y1-centerOfFaceY) * math.cos(math.radians(rotationAngle))) + centerOfFaceY
-        rotatedX2 = ((x2-centerOfFaceX) * math.cos(math.radians(rotationAngle))) - ((y2-centerOfFaceY) * math.sin(math.radians(rotationAngle)))+centerOfFaceX
-        rotatedY2 = ((x2-centerOfFaceX) * math.sin(math.radians(rotationAngle))) + ((y2-centerOfFaceY) * math.cos(math.radians(rotationAngle)))+centerOfFaceY
+    ignore_arcs.sort()
+    available_arcs = []
+    last_end = 0
 
-        #points = [[centerOfFaceX, centerOfFaceY], [x1, y1], [x2, y2]]
-        points = [[centerOfFaceX, centerOfFaceY], [rotatedX1, rotatedY1], [rotatedX2, rotatedY2]]
-        ctr = np.array(points).reshape((-1, 1, 2)).astype(np.int32)
-        contours.append(ctr)
+    for arc_start, arc_end in ignore_arcs:
+        if arc_start > last_end:
+            available_arcs.append((last_end, arc_start))
+        last_end = arc_end
 
-        #get center of contour to place labels
-        centerOfContourX = centerOfFaceX + (math.cos(degreesOfEach * (i+0.5)))*areaSize
-        centerOfContourY = centerOfFaceY + (math.sin(degreesOfEach * (i+0.5))) * areaSize
+    if last_end < 360:
+        if ignore_arcs[0][0] < 0:
+            available_arcs.append((last_end, 360 + ignore_arcs[0][0]))
+        else:
+            available_arcs.append((last_end, 360))
 
-        rotatedXCenterOfContour = ((centerOfContourX-centerOfFaceX) * math.cos(math.radians(rotationAngle))) - ((centerOfContourY-centerOfFaceY) * math.sin(math.radians(rotationAngle)))+centerOfFaceX
-        rotatedYCenterOfContour = ((centerOfContourX-centerOfFaceX) * math.sin(math.radians(rotationAngle))) + ((centerOfContourY-centerOfFaceY) * math.cos(math.radians(rotationAngle)))+centerOfFaceY
+    available_degrees = 360 - (len(theignoreGuiAngles) * theignoreAngleArc)
+    degrees_per_segment = available_degrees / totalN
 
-        centerOfContour=(int(rotatedXCenterOfContour),int(rotatedYCenterOfContour))
-        centerOfContours.append(centerOfContour)
+    contours = []
+    centerOfContours = []
+    rotationAngle = available_degrees / (totalN * 2)
+    segments_drawn = 0
+
+    def rotate(x, y, angle_deg):
+        angle_rad = math.radians(angle_deg)
+        dx = x - centerOfFaceX
+        dy = y - centerOfFaceY
+        rx = dx * math.cos(angle_rad) - dy * math.sin(angle_rad) + centerOfFaceX
+        ry = dx * math.sin(angle_rad) + dy * math.cos(angle_rad) + centerOfFaceY
+        return rx, ry
+
+    for arc_start, arc_end in available_arcs:
+        arc_length = arc_end - arc_start
+        num_segments = int(round(arc_length / degrees_per_segment))
+
+        for j in range(num_segments):
+            if segments_drawn >= totalN:
+                break
+
+            angle1_deg = (arc_start + j * degrees_per_segment + offsetAngleDeg) #% 360
+            angle2_deg = (arc_start + (j + 1) * degrees_per_segment + offsetAngleDeg) #% 360
+
+            angle1_rad = math.radians(angle1_deg)
+            angle2_rad = math.radians(angle2_deg)
+
+            x1 = centerOfFaceX + math.cos(angle1_rad) * areaSize
+            y1 = centerOfFaceY + math.sin(angle1_rad) * areaSize
+            x2 = centerOfFaceX + math.cos(angle2_rad) * areaSize
+            y2 = centerOfFaceY + math.sin(angle2_rad) * areaSize
+
+            rotatedX1, rotatedY1 = rotate(x1, y1, rotationAngle)
+            rotatedX2, rotatedY2 = rotate(x2, y2, rotationAngle)
+
+            points = [[centerOfFaceX, centerOfFaceY], [rotatedX1, rotatedY1], [rotatedX2, rotatedY2]]
+            ctr = np.array(points).reshape((-1, 1, 2)).astype(np.int32)
+            contours.append(ctr)
+
+            centerAngleDeg = (angle1_deg + angle2_deg) / 2
+            centerAngleRad = math.radians(centerAngleDeg)
+            cx = centerOfFaceX + math.cos(centerAngleRad) * areaSize
+            cy = centerOfFaceY + math.sin(centerAngleRad) * areaSize
+            rcx, rcy = rotate(cx, cy, rotationAngle)
+
+            centerOfContours.append((int(rcx), int(rcy)))
+
+            segments_drawn += 1
 
     return contours, centerOfContours
+
 
 
 def GetFaceSizeAndCenter(shape,landMarks):
@@ -397,10 +416,11 @@ def GetFaceSizeAndCenter(shape,landMarks):
     return faceXmin,faceXmax,faceYmin,faceYmax, centerOfFaceX,centerOfFaceY
 
 
-def GetGUI(theUIFrame,radiusAsPercentX,radiusAsPercentY,totalN,centerFaceX,centerFaceY,nosePosition):
-    theContours, centerContours = GetAreaPoints(totalN, centerFaceX, centerFaceY,100,360/(totalN*2))  # area number, total areas
+def GetGUI(theUIFrame,radiusAsPercentX,radiusAsPercentY,totalN,centerFaceX,centerFaceY,nosePosition,theignoreGuiAngles,theignoreAngleArc):
+    theContours, centerContours = GetAreaPoints(totalN, centerFaceX, centerFaceY,100,theignoreGuiAngles,theignoreAngleArc)  # area number, total areas
     # set center of face
     for i in range(totalN):
+        #for color purposes
         if i %2 ==0:
             cv2.fillPoly(theUIFrame, [theContours[i]], [250, 250, 250])
         else:
@@ -415,14 +435,14 @@ def GetGUI(theUIFrame,radiusAsPercentX,radiusAsPercentY,totalN,centerFaceX,cente
 
     return polyEllipse,theContours,centerContours
 
-def getLLM(queue,LlmService,LlmKey,lastWord):
+def getLLM(queue,theLlmService,LlmKey,lastWord,theSeedword,thetotalOptionsN,thellmContextSize, thellmBatchSize):
     if lastWord is None or lastWord == "":
-        prompt = f"Give me a list of only {totalOptionsN - len(labelsLLMOptions)} words with no explanation that go after: \"{FaceTracker.seedWord}\""
+        prompt = f"Give me a list of only {thetotalOptionsN} words with no explanation that go after: \"{theSeedword}\""
     else:
-        prompt = f"Give me a list of only {totalOptionsN - len(labelsLLMOptions)} words with no explanation that go after: \"{lastWord}\""
+        prompt = f"Give me a list of only {thetotalOptionsN} words with no explanation that go after: \"{lastWord}\""
     # print(f"prompt: {prompt}")
 
-    if LlmService=="ChatGPT" and is_connected():
+    if theLlmService=="ChatGPT" and is_connected():
         #print("Calling ChatGPT: ")
         try:
             client = OpenAI(api_key=LlmKey)
@@ -449,89 +469,87 @@ def getLLM(queue,LlmService,LlmKey,lastWord):
                 print(f"An error occurred: {e}")
 
             print(f"Changing mode to local LLM")
-            FaceTracker.llmService="Local"
+            theLlmService="Local"
             prompt = generate_prompt_from_template(prompt)
             print("calling local LLM: ")
-            llm = loadLLM("zephyr-7b-beta.Q4_K_M.gguf", llmContextSize, llmBatchSize)
+            llm = loadLLM("zephyr-7b-beta.Q4_K_M.gguf", thellmContextSize, thellmBatchSize)
             generatedText = generate_text(llm, prompt)
             generatedText = re.sub(r'\d+\.?\s*', '', generatedText)
             # print(f"generated Text: {generatedText}")
             result = generatedText.splitlines()
-            # print(f"generated Text: {FaceTracker.labelsLMM}")
+            # print(f"generated Text: {thelabelsLMM}")
     else:
         prompt = generate_prompt_from_template(prompt)
         print("calling local LLM: ")
-        llm = loadLLM("zephyr-7b-beta.Q4_K_M.gguf", llmContextSize, llmBatchSize)
+        llm = loadLLM("zephyr-7b-beta.Q4_K_M.gguf", thellmContextSize, thellmBatchSize)
         generatedText = generate_text(llm, prompt)
         generatedText = re.sub(r'\d+\.?\s*', '', generatedText)
         #print(f"generated Text: {generatedText}")
         result = generatedText.splitlines()
-        #print(f"generated Text: {FaceTracker.labelsLMM}")
+        #print(f"generated Text: {thelabelsLMM}")
     queue.put(result)
 
-def determineMaxWrittenSize(screenWidth, whatsWritten,font,fontScale,fontThickness):
-    if len(whatsWritten)<=1:
-        whatsWritten="A"
-    (text_width, text_height), baseline = cv2.getTextSize(whatsWritten, font, fontScale, fontThickness)
-    oneCharTextWidth=math.ceil(text_width/len(whatsWritten))#average char size
-    max_chars = math.floor(screenWidth / oneCharTextWidth)
+def determineMaxWrittenSize(thescreenWidth, thewhatsWritten,thefont,thefontScale,thefontThickness,themaxWhatsWrittenSize):
+    if len(thewhatsWritten)<=1:
+        thewhatsWritten="A"
+    (text_width, text_height), baseline = cv2.getTextSize(thewhatsWritten, thefont, thefontScale, thefontThickness)
+    oneCharTextWidth=math.ceil(text_width/len(thewhatsWritten))#average char size
+    max_chars = math.floor(thescreenWidth / oneCharTextWidth)
     # show up until max numbers of characters
-    if max_chars<FaceTracker.maxWhatsWrittenSize:
-        FaceTracker.maxWhatsWrittenSize=int(max_chars)
-    if max_chars<len(FaceTracker.whatsWritten):
-        FaceTracker.whatsWritten=FaceTracker.whatsWritten[-FaceTracker.maxWhatsWrittenSize:]
-    #print(f"max chars: {max_chars}, len(whatsWritten): {len(whatsWritten)}, whats written: \"{FaceTracker.whatsWritten}\"")
-    return (text_width, text_height), baseline
+    if max_chars<themaxWhatsWrittenSize:
+        themaxWhatsWrittenSize=int(max_chars)
+    if max_chars<len(thewhatsWritten):
+        thewhatsWritten=thewhatsWritten[-themaxWhatsWrittenSize:]
+    #print(f"max chars: {max_chars}, len(whatsWritten): {len(whatsWritten)}, whats written: \"{thewhatsWritten}\"")
+    return (text_width, text_height), baseline,themaxWhatsWrittenSize
 
-def showWhatsWritten(theTopFrame,dimensionsTop):
+
+def showWhatsWritten(theTopFrame,dimensionsTop,thewhatsWritten, thefont,thefontScale,thefontThickness,theshowWrittenMode,themaxWhatsWrittenSize):
     #start options
     percentageTakenByWritten = .1 #10% of screen taken by secondary screen
-
     top_height = int(dimensionsTop[0] * percentageTakenByWritten)
     # splitIntoHalves
     top_half = theTopFrame[:top_height, :]
     bottom_half = theTopFrame[top_height:, :]
     topHalfSize = top_half.shape
-
-    (text_width, text_height), baseline=determineMaxWrittenSize(topHalfSize[1],FaceTracker.whatsWritten, FaceTracker.font,
-                                                          FaceTracker.fontScale, FaceTracker.fontThickness)
+    (text_width, text_height), baseline,themaxWhatsWrittenSize = determineMaxWrittenSize(topHalfSize[1],thewhatsWritten, thefont,thefontScale, thefontThickness,themaxWhatsWrittenSize)
 
     # put black background
     top_half = np.zeros((topHalfSize[0], topHalfSize[1], 3), dtype=np.uint8)
 
-    if "mirror" in FaceTracker.showWrittenMode.lower():
+    if "mirror" in theshowWrittenMode.lower():
         left_half = top_half[:, :topHalfSize[1] // 2]  # Left half
         right_half = top_half[:, topHalfSize[1] // 2:]  # Right half
         sideHalfSize = left_half.shape
-        (text_width, text_height), baseline= determineMaxWrittenSize(sideHalfSize[1],FaceTracker.whatsWritten, FaceTracker.font,FaceTracker.fontScale, FaceTracker.fontThickness)
+        (text_width, text_height), baseline,themaxWhatsWrittenSize= determineMaxWrittenSize(sideHalfSize[1],thewhatsWritten, thefont,thefontScale, thefontThickness,themaxWhatsWrittenSize)
         # put white text on black background
-        if FaceTracker.showWrittenMode.lower()=="CloneAndMirror".lower():
-            cv2.putText(right_half, FaceTracker.whatsWritten,
-                        (int((sideHalfSize[1] / 2) - text_width / 2), text_height + 20), FaceTracker.font,
-                        FaceTracker.fontScale, (255, 255, 255), FaceTracker.fontThickness, cv2.LINE_AA)
-            cv2.putText(left_half, FaceTracker.whatsWritten,
-                        (int((sideHalfSize[1] / 2) - text_width / 2), text_height + 20), FaceTracker.font,
-                        FaceTracker.fontScale, (255, 255, 255), FaceTracker.fontThickness, cv2.LINE_AA)
+        if theshowWrittenMode.lower()=="CloneAndMirror".lower():
+            cv2.putText(right_half, thewhatsWritten,
+                        (int((sideHalfSize[1] / 2) - text_width / 2), text_height + 20), thefont,
+                        thefontScale, (255, 255, 255), thefontThickness, cv2.LINE_AA)
+            cv2.putText(left_half, thewhatsWritten,
+                        (int((sideHalfSize[1] / 2) - text_width / 2), text_height + 20), thefont,
+                        thefontScale, (255, 255, 255), thefontThickness, cv2.LINE_AA)
             # Create a mirrored version of the image
             mirrored_right_half = cv2.flip(right_half, 1)
             combined_TopHalf = cv2.hconcat([left_half, mirrored_right_half])
             theTopFrame = cv2.vconcat([combined_TopHalf, bottom_half])
-        elif FaceTracker.showWrittenMode.lower()=="CloneAndFlipMirror".lower():
-            cv2.putText(right_half, FaceTracker.whatsWritten,
-                        (int((sideHalfSize[1] / 2) - text_width / 2), text_height + 20), FaceTracker.font,
-                        FaceTracker.fontScale, (255, 255, 255), FaceTracker.fontThickness, cv2.LINE_AA)
-            cv2.putText(left_half, FaceTracker.whatsWritten,
-                        (int((sideHalfSize[1] / 2) - text_width / 2), text_height + 20), FaceTracker.font,
-                        FaceTracker.fontScale, (255, 255, 255), FaceTracker.fontThickness, cv2.LINE_AA)
+        elif theshowWrittenMode.lower()=="CloneAndFlipMirror".lower():
+            cv2.putText(right_half, thewhatsWritten,
+                        (int((sideHalfSize[1] / 2) - text_width / 2), text_height + 20), thefont,
+                        thefontScale, (255, 255, 255), thefontThickness, cv2.LINE_AA)
+            cv2.putText(left_half, thewhatsWritten,
+                        (int((sideHalfSize[1] / 2) - text_width / 2), text_height + 20), thefont,
+                        thefontScale, (255, 255, 255), thefontThickness, cv2.LINE_AA)
             # Create a mirrored version of the image
             mirrored_right_half = cv2.flip(right_half, 1)
             mirrored_right_half = cv2.flip(mirrored_right_half, 0)
             combined_TopHalf = cv2.hconcat([left_half, mirrored_right_half])
             theTopFrame = cv2.vconcat([combined_TopHalf, bottom_half])
-        elif FaceTracker.showWrittenMode.lower()=="Mirror".lower():
-            cv2.putText(top_half, FaceTracker.whatsWritten,
-                        (int((dimensionsTop[1] / 2) - text_width / 2), text_height + 20), FaceTracker.font,
-                    FaceTracker.fontScale, (255, 255, 255), FaceTracker.fontThickness, cv2.LINE_AA)
+        elif theshowWrittenMode.lower()=="Mirror".lower():
+            cv2.putText(top_half, thewhatsWritten,
+                        (int((dimensionsTop[1] / 2) - text_width / 2), text_height + 20), thefont,
+                    thefontScale, (255, 255, 255), thefontThickness, cv2.LINE_AA)
             # Create a mirrored version of the image
             mirrored_half = cv2.flip(top_half, 1)
 
@@ -540,11 +558,11 @@ def showWhatsWritten(theTopFrame,dimensionsTop):
             #put white text on black background
             mirrored_top_half = cv2.flip(top_half, 1)
             theTopFrame = cv2.vconcat([mirrored_top_half, bottom_half])
-    elif FaceTracker.showWrittenMode.lower()=="Single".lower():
+    elif theshowWrittenMode.lower()=="Single".lower():
         # put white text on black background
-        cv2.putText(top_half, FaceTracker.whatsWritten,
-                    (int((dimensionsTop[1] / 2) - text_width / 2), text_height + 20), FaceTracker.font,
-                    FaceTracker.fontScale, (255, 255, 255), FaceTracker.fontThickness, cv2.LINE_AA)
+        cv2.putText(top_half, thewhatsWritten,
+                    (int((dimensionsTop[1] / 2) - text_width / 2), text_height + 20), thefont,
+                    thefontScale, (255, 255, 255), thefontThickness, cv2.LINE_AA)
         # Create a mirrored version of the image
         # mirrored_top_half = cv2.flip(top_half, 1)
         theTopFrame = cv2.vconcat([top_half, bottom_half])
@@ -553,73 +571,56 @@ def showWhatsWritten(theTopFrame,dimensionsTop):
     return theTopFrame
 
 
-def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabelList,centerOfContours,color,lettersColor,dimensionsTop):
-    if FaceTracker.showFPS:
-        cv2.putText(theTopFrame, "FPS: " + str(int(fps)), org=(int(dimensionsTop[0] / 2), 20),
+def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabelList,centerOfContours,color,
+                  lettersColor,dimensionsTop,theshowFPS,thestartTime,thelastWord,theprevLastWord,thellmIsWorkingFlag,
+                  theLlmService,theLlmKey,thellmWaitTime,thefont, thefontScale, thefontThickness,theredFrameColor,
+                  thewhatsWritten,thefps,thelabelsLMM,theSeedWord,thelabelsQuick,thelabelsABC,thelabelsNumbers,thelabelsSpecial,
+                  themouseSpeed,theshowWritten,theshowWrittenMode,themaxWhatsWrittenSize,thetotalOptionsN,thellmContextSize,thellmBatchSize):
+    if theshowFPS:
+        cv2.putText(theTopFrame, "FPS: " + str(int(thefps)), org=(int(dimensionsTop[0] / 2), 20),
                     fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=0.5, color=(0, 255, 0), thickness=2)
     endTime = time.time()
-    totalTime = math.ceil(endTime - FaceTracker.startTime)
+    totalTime = math.ceil(endTime - thestartTime)
 
-    if FaceTracker.lastWord !=FaceTracker.prevLastWord:
-        FaceTracker.prevLastWord = FaceTracker.lastWord
-        if queue.empty() and not FaceTracker.llmIsWorkingFlag:  # Check if we need to call the slow method
-            FaceTracker.startTime = time.time()
-            llmCall = multiprocessing.Process(target=getLLM, args=(queue,FaceTracker.LlmService,FaceTracker.LlmKey,FaceTracker.lastWord,))
-            llmCall.start()
-            FaceTracker.llmIsWorkingFlag= True
+
+
+
+    if thellmIsWorkingFlag:
+        if thellmWaitTime<=0:
+            warningText = f"LLM: \"{thelastWord}\",Calculating seconds left for next call"
         else:
-            if FaceTracker.llmWaitTime<=0:
-                theText = f"LLM has been called with \"{FaceTracker.lastWord}\", Calculating Timeframe for future calls"
-            else:
-                theText = f"LLM has been called with \"{FaceTracker.lastWord}\", aprox time: {totalTime} seconds out of {FaceTracker.llmWaitTime}"
-            FaceTracker.labelsLMM = ["", "", "", "", ""]
-            FaceTracker.prettyPrintInCamera(theTopFrame,theText,(int(dimensionsTop[1] / 2),int(dimensionsTop[0])), color)
-
-    if not queue.empty():
-        FaceTracker.llmIsWorkingFlag = False
-        result = queue.get()
-        print(f"result: {result}")
-        if totalTime > FaceTracker.llmWaitTime:
-            FaceTracker.llmWaitTime = totalTime
-            changeLlmWaitTime(totalTime)
-        #print(f"LLM Call took: {totalTime} seconds")
-        FaceTracker.labelsLMM=result
-
-    if FaceTracker.llmIsWorkingFlag:
-        if FaceTracker.llmWaitTime<=0:
-            warningText = f"LLM: \"{FaceTracker.lastWord}\",Calculating seconds left for next call"
-        else:
-            warningText=f"LLM: \"{FaceTracker.lastWord}\",aprox {int(totalTime/FaceTracker.llmWaitTime*100)}% done, {int(FaceTracker.llmWaitTime-totalTime)} seconds left"
+            warningText=f"LLM: \"{thelastWord}\",aprox {int(totalTime/thellmWaitTime*100)}% done, {int(thellmWaitTime-totalTime)} seconds left"
         #print(dimensionsTop)
-        FaceTracker.labelsLMM = ["", "", "", "", ""]
-        (text_width, text_height), baseline = cv2.getTextSize(warningText, FaceTracker.font, FaceTracker.fontScale, FaceTracker.fontThickness)
-        FaceTracker.prettyPrintInCamera(theTopFrame, warningText,(int(dimensionsTop[1] / 2),dimensionsTop[0]+int(text_height*0.4)), FaceTracker.redFrameColor,onCenter=True)#x and y are inverted in call
+        thelabelsLMM = ["", "", "", "", ""]
+        (text_width, text_height), baseline = cv2.getTextSize(warningText, thefont, thefontScale, thefontThickness)
+        prettyPrintInCamera(theTopFrame, warningText,(int(dimensionsTop[1] / 2),dimensionsTop[0]+int(text_height*0.4)), theredFrameColor,thefontScale,thefontThickness,onCenter=True)#x and y are inverted in call
 
-    if FaceTracker.showWritten:
-        theTopFrame = showWhatsWritten(theTopFrame,dimensionsTop)
+    if theshowWritten:
+        theTopFrame = showWhatsWritten(theTopFrame,dimensionsTop,thewhatsWritten,thefont,thefontScale,thefontThickness,theshowWrittenMode,themaxWhatsWrittenSize)
 
     #--------------------------
     # Menu System--------------
     #--------------------------
     if theCurrentSelection[0] < 0:#no option has been chosen
         if theCurrentSelection[1]=="MainMenu":
-            GetMainMenu(totalN, theTopFrame,theCurrentSelection,centerOfContours,color,lettersColor)
+            GetMainMenu(totalN, theTopFrame,theCurrentSelection,centerOfContours,color,lettersColor,thefontScale, thefontThickness,thelabelsNumbers, thelabelsSpecial,thelabelsABC)
         elif(theCurrentSelection[1]=="MultipleLetters"):
-            GetCharacterDivisionMenu(theCreatedLabelList, totalN, theTopFrame, theCurrentSelection,centerOfContours,color,lettersColor)
+            GetCharacterDivisionMenu(theCreatedLabelList, totalN, theTopFrame, theCurrentSelection,centerOfContours,color,lettersColor,thefontScale,thefontThickness)
         elif (theCurrentSelection[1] == "MultipleNumbers"):
-            GetCharacterDivisionMenu(theCreatedLabelList, totalN, theTopFrame, theCurrentSelection,centerOfContours,color,lettersColor)
+            GetCharacterDivisionMenu(theCreatedLabelList, totalN, theTopFrame, theCurrentSelection,centerOfContours,color,lettersColor,thefontScale,thefontThickness)
         elif (theCurrentSelection[1] == "MultipleSpecialChars"):
-            GetCharacterDivisionMenu(theCreatedLabelList, totalN, theTopFrame, theCurrentSelection,centerOfContours,color,lettersColor)
+            GetCharacterDivisionMenu(theCreatedLabelList, totalN, theTopFrame, theCurrentSelection,centerOfContours,color,lettersColor,thefontScale,thefontThickness)
         elif(theCurrentSelection[1]=="Quick"):
-            DisplayOtherMenus(labelsQuick,labelsQuickOptions, totalN, theTopFrame,centerOfContours,color)
+            DisplayOtherMenus(thelabelsQuick,labelsQuickOptions, totalN, theTopFrame,centerOfContours,color,thefontScale,thefontThickness)
         elif (theCurrentSelection[1] == "MouseControl"):
-            DisplayMouseMenu(labelsMouse, labelsMouseMenu, totalN, theTopFrame,centerOfContours,color)
+            DisplayMouseMenu(labelsMouse, labelsMouseMenu, totalN, theTopFrame,centerOfContours,color,thefontScale,thefontThickness)
             theCurrentSelection[0] = -1
         elif (theCurrentSelection[1] == "LLM"):
-            DisplayOtherMenus(FaceTracker.labelsLMM,labelsLLMOptions, totalN, theTopFrame,centerOfContours,color)
+            DisplayOtherMenus(thelabelsLMM,labelsLLMOptions, totalN, theTopFrame,centerOfContours,color,thefontScale,thefontThickness)
     else:  # if an option has been chosen
         if(theCurrentSelection[1]=="MainMenu"):
-            theCreatedLabelList=GetMainMenu(totalN,theTopFrame,theCurrentSelection,centerOfContours,color,lettersColor)
+            theCreatedLabelList=GetMainMenu(totalN,theTopFrame,theCurrentSelection,centerOfContours,color,lettersColor,thefontScale,thefontThickness,
+                                            thelabelsNumbers,thelabelsSpecial,thelabelsABC)
             # reset value and select new menu
             if theCurrentSelection[0]==0:#Quick
                 print("Menu: " + str(labelsMainMenu[theCurrentSelection[0]]))
@@ -629,8 +630,8 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
                 print("pressed: Backspace")
                 keyboard.press(Key.backspace)
                 keyboard.release(Key.backspace)
-                if len(FaceTracker.whatsWritten)>0:
-                    FaceTracker.whatsWritten = FaceTracker.whatsWritten[:-1]
+                if len(thewhatsWritten)>0:
+                    thewhatsWritten = thewhatsWritten[:-1]
             elif theCurrentSelection[0]==2:#LLM
                 print(f"Menu: {str(labelsMainMenu[theCurrentSelection[0]])}, selection: {theCurrentSelection[0]}")
                 theCurrentSelection = [-1, "LLM"]
@@ -639,78 +640,79 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
                 print("pressed: Space")
                 keyboard.press(Key.space)
                 keyboard.release(Key.space)
-                FaceTracker.whatsWritten = FaceTracker.whatsWritten+" "
-                last_word = FaceTracker.whatsWritten.split()[-1] if FaceTracker.whatsWritten.strip() else None
+                thewhatsWritten = thewhatsWritten+" "
+                last_word = thewhatsWritten.split()[-1] if thewhatsWritten.strip() else None
                 if last_word is not None:
-                    FaceTracker.lastWord=last_word
+                    thelastWord=last_word
             elif theCurrentSelection[0] == 4:#Mouse Control
                 theCurrentSelection = [-1, "MouseControl"]
                 print("menu: " + str(labelsMainMenu[theCurrentSelection[0]]))
             elif theCurrentSelection[0] == 5:#ABC
-                print(f"Letters Menu: {labelsABC}")
+                print(f"Letters Menu: {thelabelsABC}")
                 theCurrentSelection = [-1,"MultipleLetters"]
-                theCreatedLabelList = labelsABC
+                theCreatedLabelList = thelabelsABC
                 theCreatedLabelList, theCurrentSelection = GetCharacterDivisionMenu(
-                    labelsABC, totalN, theTopFrame, theCurrentSelection,centerOfContours,color,lettersColor)
+                    thelabelsABC, totalN, theTopFrame, theCurrentSelection,centerOfContours,color,lettersColor,thefontScale,thefontThickness)
             elif theCurrentSelection[0] == 6:  # Numbers
-                print(f"Letters Menu: {labelsNumbers}")
+                print(f"Letters Menu: {thelabelsNumbers}")
                 theCurrentSelection = [-1,"MultipleNumbers"]
-                theCreatedLabelList = labelsNumbers
+                theCreatedLabelList = thelabelsNumbers
                 theCreatedLabelList, theCurrentSelection = GetCharacterDivisionMenu(
-                    labelsNumbers, totalN, theTopFrame, theCurrentSelection,centerOfContours,color,lettersColor)
+                    thelabelsNumbers, totalN, theTopFrame, theCurrentSelection,centerOfContours,color,lettersColor,thefontScale,thefontThickness)
             elif theCurrentSelection[0] == 7:#Special Characters
-                print(f"Letters Menu: {labelsSpecial}")
+                print(f"Letters Menu: {thelabelsSpecial}")
                 theCurrentSelection = [-1,"MultipleSpecialChars"]
-                theCreatedLabelList = labelsSpecial
+                theCreatedLabelList = thelabelsSpecial
                 theCreatedLabelList, theCurrentSelection = GetCharacterDivisionMenu(
-                    labelsSpecial, totalN, theTopFrame, theCurrentSelection,centerOfContours,color,lettersColor)
+                    thelabelsSpecial, totalN, theTopFrame, theCurrentSelection,centerOfContours,color,lettersColor,thefontScale,thefontThickness)
         elif(theCurrentSelection[1]=="MouseControl"):
-            DisplayMouseMenu(labelsMouse, labelsMouseMenu, totalN, theTopFrame,centerOfContours,color)
+            DisplayMouseMenu(labelsMouse, labelsMouseMenu, totalN, theTopFrame,centerOfContours,color,thefontScale,thefontThickness)
             #"Click","Back","Double Click","RightClick"
 
             if theCurrentSelection[0] == 2:  #"Back",
                 theCurrentSelection = [-1, "MainMenu"]
                 print("Selected Option: MainMenu")
             elif theCurrentSelection[0] == 1:#down
-                mouse.move(0,mouseSpeed)
-                print("mouse moved down: "+str(mouseSpeed))
+                mouse.move(0,themouseSpeed)
+                print("mouse moved down: "+str(themouseSpeed))
             elif theCurrentSelection[0] == 0:  # Click
                 mouse.press(Button.left)
                 mouse.release(Button.left)
                 theCurrentSelection[0] = -1
                 print("mouse Left Clicked")
             elif theCurrentSelection[0] == 3:  # Left
-                mouse.move(-mouseSpeed, 0)
-                print("mouse moved left: " + str(mouseSpeed))
+                mouse.move(-themouseSpeed, 0)
+                print("mouse moved left: " + str(themouseSpeed))
             elif theCurrentSelection[0] == 4:  # Double Click
                 mouse.click(Button.left,2)
                 theCurrentSelection[0] = -1
                 print("mouse double clicked")
             elif theCurrentSelection[0] == 5:  # Up
-                mouse.move(0,-mouseSpeed)
-                print("mouse moved up: " + str(mouseSpeed))
+                mouse.move(0,-themouseSpeed)
+                print("mouse moved up: " + str(themouseSpeed))
             elif theCurrentSelection[0] == 6:  # RightClick
                 mouse.press(Button.right)
                 mouse.release(Button.right)
                 theCurrentSelection[0] = -1
             elif theCurrentSelection[0] == 7:  # Right
-                mouse.move(mouseSpeed, 0)
-                print("mouse moved left: " + str(mouseSpeed))
+                mouse.move(themouseSpeed, 0)
+                print("mouse moved left: " + str(themouseSpeed))
             elif theCurrentSelection[0] == -1:  # Right
                 mouse.move(0, 0)
                 print("mouse is still. ")
+
         elif(theCurrentSelection[1]=="MultipleLetters" or theCurrentSelection[1]=="MultipleNumbers" or theCurrentSelection[1]=="MultipleSpecialChars"):
             #select character set
 
-            print(f"label list 1: {theCreatedLabelList}")
+            #print(f"label list 1: {theCreatedLabelList}")
             if theCurrentSelection[1]== -1:
                 return theCurrentSelection,theCreatedLabelList
             elif (theCreatedLabelList[0]=="" and theCurrentSelection[1]=="MultipleLetters"):
-                theCreatedLabelList=labelsABC
+                theCreatedLabelList=thelabelsABC
             elif (theCreatedLabelList[0]=="" and theCurrentSelection[1]=="MultipleNumbers"):
-                theCreatedLabelList=labelsNumbers
+                theCreatedLabelList=thelabelsNumbers
             elif (theCreatedLabelList[0]=="" and theCurrentSelection[1]=="MultipleSpecialChars"):
-                theCreatedLabelList=labelsSpecial
+                theCreatedLabelList=thelabelsSpecial
 
             #when selecting the letter menu
             if theCurrentSelection[0]==0:#"Quick", "", ""]
@@ -721,106 +723,141 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
                 print("pressed: Backspace")
                 keyboard.press(Key.backspace)
                 keyboard.release(Key.backspace)
-                if len(FaceTracker.whatsWritten)>0:
-                    FaceTracker.whatsWritten = FaceTracker.whatsWritten[:-1]
+                if len(thewhatsWritten)>0:
+                    thewhatsWritten = thewhatsWritten[:-1]
             elif theCurrentSelection[0] == 2:#Back
                 theCurrentSelection = [-1,"MainMenu"]
-            #when selecting a letter or group of letters
 
+            #when selecting a letter or group of letters
             sizeOfLabelText=len(theCreatedLabelList[theCurrentSelection[0] - len(labelsLettersMenu)])
             if(sizeOfLabelText==1):
-                print("pressed: " + str(theCreatedLabelList[theCurrentSelection[0] - len(labelsLettersMenu)]))
-                DisplayCharactersMenu(theCreatedLabelList, totalN, theTopFrame, theCurrentSelection,centerOfContours,color)
+                #print(f"currentSelectionId,labelsLettersMenu,pressed: {theCurrentSelection[0]},{labelsLettersMenu}, {str(theCreatedLabelList[theCurrentSelection[0] - len(labelsLettersMenu)])}")
+                DisplayCharactersMenu(theCreatedLabelList, totalN, theTopFrame, theCurrentSelection,centerOfContours,color,thefontScale,thefontThickness)
                 if (str(theCreatedLabelList[theCurrentSelection[0] - len(labelsLettersMenu)]))=='_':
                     keyboard.press(Key.space)
                     keyboard.release(Key.space)
-                    FaceTracker.whatsWritten = FaceTracker.whatsWritten + " "
+                    thewhatsWritten = thewhatsWritten + " "
+                    thelastWord = thewhatsWritten.split()[-1] if thewhatsWritten.strip() else None
                 else:
-                    keyboard.press(str(theCreatedLabelList[theCurrentSelection[0] - len(labelsLettersMenu)]))
-                    keyboard.release(str(theCreatedLabelList[theCurrentSelection[0] - len(labelsLettersMenu)]))
-                    FaceTracker.whatsWritten = FaceTracker.whatsWritten + str(theCreatedLabelList[theCurrentSelection[0] - len(labelsLettersMenu)])
+                    if theCurrentSelection[0]!=-1:
+                        keyboard.press(str(theCreatedLabelList[theCurrentSelection[0] - len(labelsLettersMenu)]))
+                        keyboard.release(str(theCreatedLabelList[theCurrentSelection[0] - len(labelsLettersMenu)]))
+                        thewhatsWritten = thewhatsWritten + str(theCreatedLabelList[theCurrentSelection[0] - len(labelsLettersMenu)])
             elif (sizeOfLabelText>1):
                 selectedFromListIndex=theCurrentSelection[0] - len(labelsLettersMenu)
                 if(selectedFromListIndex<0):
                     selectedFromListIndex=0
-                print(f"label list 2: {theCreatedLabelList}, selected from list: {selectedFromListIndex}")
+                #print(f"label list 2: {theCreatedLabelList}, selected from list: {selectedFromListIndex}")
                 theCreatedLabelList, theCurrentSelection = GetCharacterDivisionMenu(
-                    theCreatedLabelList[selectedFromListIndex], totalN, theTopFrame,theCurrentSelection,centerOfContours,color,lettersColor)
+                    theCreatedLabelList[selectedFromListIndex], totalN, theTopFrame,theCurrentSelection,centerOfContours,color,lettersColor,thefontScale,thefontThickness)
             theCurrentSelection[0] = -1
         elif(theCurrentSelection[1]=="Quick"):#"LLM","BackSpace","Back"
-            DisplayOtherMenus(labelsQuick, labelsQuickOptions,totalN, theTopFrame,centerOfContours,color)
+            DisplayOtherMenus(thelabelsQuick, labelsQuickOptions,totalN, theTopFrame,centerOfContours,color,thefontScale,thefontThickness)
             if theCurrentSelection[0] == 0:
                 theCurrentSelection = [-1, "LLM"]
             elif theCurrentSelection[0] == 1:
                 print("pressed: Backspace")
                 keyboard.press(Key.backspace)
                 keyboard.release(Key.backspace)
-                if len(FaceTracker.whatsWritten)>0:
-                    FaceTracker.whatsWritten = FaceTracker.whatsWritten[:-1]
+                if len(thewhatsWritten)>0:
+                    thewhatsWritten = thewhatsWritten[:-1]
             elif theCurrentSelection[0] == 2:
                 theCurrentSelection = [-1, "MainMenu"]
             elif(theCurrentSelection[0]>=len(labelsQuickOptions)):
-                print("Typed Quick: "+labelsQuick[theCurrentSelection[0]-len(labelsQuickOptions)])
-                keyboard.type(" "+labelsQuick[theCurrentSelection[0]-len(labelsQuickOptions)]+" ")
-                FaceTracker.whatsWritten = FaceTracker.whatsWritten + " "+labelsQuick[theCurrentSelection[0]-len(labelsQuickOptions)]+" "
-                FaceTracker.lastWord = labelsQuick[theCurrentSelection[0]-len(labelsQuickOptions)]
+                print("Typed Quick: "+thelabelsQuick[theCurrentSelection[0]-len(labelsQuickOptions)])
+                keyboard.type(" "+thelabelsQuick[theCurrentSelection[0]-len(labelsQuickOptions)]+" ")
+                thewhatsWritten = thewhatsWritten + " "+thelabelsQuick[theCurrentSelection[0]-len(labelsQuickOptions)]+" "
+                thelastWord = thelabelsQuick[theCurrentSelection[0]-len(labelsQuickOptions)]
             theCurrentSelection[0] = -1
         elif(theCurrentSelection[1]=="LLM"):
-            DisplayOtherMenus(labelsLMM,labelsLLMOptions, totalN, theTopFrame,centerOfContours,color)
+            DisplayOtherMenus(labelsLMM,labelsLLMOptions, totalN, theTopFrame,centerOfContours,color,thefontScale,thefontThickness)
             if theCurrentSelection[0] == 0:
                 theCurrentSelection = [-1, "Quick"]
             elif theCurrentSelection[0] == 1:
                 print("pressed: Backspace")
                 keyboard.press(Key.backspace)
                 keyboard.release(Key.backspace)
-                if len(FaceTracker.whatsWritten)>0:
-                    FaceTracker.whatsWritten = FaceTracker.whatsWritten[:-1]
+                if len(thewhatsWritten)>0:
+                    thewhatsWritten = thewhatsWritten[:-1]
             elif theCurrentSelection[0] == 2:
                 theCurrentSelection = [-1, "MainMenu"]
             elif (theCurrentSelection[0] >= len(labelsQuickOptions)):
-                print("Typed Quick LLM: " + FaceTracker.labelsLMM[theCurrentSelection[0] - len(labelsLLMOptions)])
-                keyboard.type(" " + FaceTracker.labelsLMM[theCurrentSelection[0] - len(labelsLLMOptions)] + " ")
-                FaceTracker.whatsWritten = FaceTracker.whatsWritten + " " + FaceTracker.labelsLMM[theCurrentSelection[0] - len(labelsLLMOptions)] + " "
-                FaceTracker.lastWord=FaceTracker.labelsLMM[theCurrentSelection[0] - len(labelsLLMOptions)]
+                print("Typed Quick LLM: " + thelabelsLMM[theCurrentSelection[0] - len(labelsLLMOptions)])
+                keyboard.type(" " + thelabelsLMM[theCurrentSelection[0] - len(labelsLLMOptions)] + " ")
+                thewhatsWritten = thewhatsWritten + " " + thelabelsLMM[theCurrentSelection[0] - len(labelsLLMOptions)] + " "
+                thelastWord=thelabelsLMM[theCurrentSelection[0] - len(labelsLLMOptions)]
             theCurrentSelection[0] = -1
-    return theCurrentSelection,theCreatedLabelList, theTopFrame
 
-def DisplayMouseMenu(theLabelsList,theLabelsOptions,totalN,theTopFrame,centerOfContours,color):
+    # --------------------------
+    # LLM System--------------
+    # --------------------------
+    #print(f'logic 1 thelastWord != theprevLastWord: {thelastWord}, {theprevLastWord}')
+    if thelastWord != theprevLastWord:
+        if queue.empty() and not thellmIsWorkingFlag:  # Check if we need to call the slow method
+            thestartTime = time.time()
+            llmCall = multiprocessing.Process(target=getLLM, args=(
+            queue, theLlmService, theLlmKey, thelastWord, theSeedWord, thetotalOptionsN, thellmContextSize,
+            thellmBatchSize))
+            llmCall.start()
+            thellmIsWorkingFlag = True
+        else:
+            if thellmWaitTime <= 0:
+                theText = f"LLM has been called with \"{thelastWord}\", Calculating Timeframe for future calls"
+            else:
+                theText = f"LLM has been called with \"{thelastWord}\", aprox time: {totalTime} seconds out of {thellmWaitTime}"
+            thelabelsLMM = ["", "", "", "", ""]
+            prettyPrintInCamera(theTopFrame, theText, (int(dimensionsTop[1] / 2), int(dimensionsTop[0])), color,
+                                thefontScale, thefontThickness)
+
+    if not queue.empty():
+        thellmIsWorkingFlag = False
+        result = queue.get()
+        print(f"Prompt: {thelastWord}")
+        print(f"result: {result}")
+        if totalTime > thellmWaitTime:
+            thellmWaitTime = totalTime
+            changeLlmWaitTime(totalTime)
+        print(f"LLM Call took: {totalTime} seconds")
+        thelabelsLMM = result
+
+    return theCurrentSelection,theCreatedLabelList, theTopFrame,thelastWord,thelabelsLMM,thewhatsWritten
+
+def DisplayMouseMenu(theLabelsList,theLabelsOptions,totalN,theTopFrame,centerOfContours,color,thefontScale,thefontThickness):
     for i in range(totalN):
         # set option labels on topFrame to make them not transparent
         if i % 2 == 0:#If even, show options
-            prettyPrintInCamera(theTopFrame, theLabelsOptions[int(math.floor(i/2))], centerOfContours[i], color)
+            prettyPrintInCamera(theTopFrame, theLabelsOptions[int(math.floor(i/2))], centerOfContours[i], color,thefontScale,thefontThickness)
         else:
-            prettyPrintInCamera(theTopFrame, theLabelsList[int(math.floor(i/2))], centerOfContours[i], redFrameColor)
+            prettyPrintInCamera(theTopFrame, theLabelsList[int(math.floor(i/2))], centerOfContours[i], redFrameColor,thefontScale,thefontThickness)
 
-def DisplayCharactersMenu(theLabelsList, totalN, theTopFrame, theCurrentSelection,centerOfContours,color):
+def DisplayCharactersMenu(theLabelsList, totalN, theTopFrame, theCurrentSelection,centerOfContours,color,thefontScale,thefontThickness):
     #lettersPerArea = len(theLabelsList) / (totalN - len(labelsLettersMenu))
     lettersPerArea = math.ceil(len(theLabelsList) / (totalN - len(labelsLettersMenu)))
     for i in range(0,totalN):
         # set option labels on topFrame to make them not transparent
         if i < len(labelsLettersMenu):
-            prettyPrintInCamera(theTopFrame, labelsLettersMenu[i], centerOfContours[i], color)
+            prettyPrintInCamera(theTopFrame, labelsLettersMenu[i], centerOfContours[i], color,thefontScale,thefontThickness)
         else:
-            prettyPrintInCamera(theTopFrame, theLabelsList[i-len(labelsLettersMenu)], centerOfContours[i], redFrameColor)
+            prettyPrintInCamera(theTopFrame, theLabelsList[i-len(labelsLettersMenu)], centerOfContours[i], redFrameColor,thefontScale,thefontThickness)
 
-def DisplayOtherMenus(theLabelsList,theLabelsOptions, totalN, theTopFrame,centerOfContours,color):
+def DisplayOtherMenus(theLabelsList,theLabelsOptions, totalN, theTopFrame,centerOfContours,color,thefontScale,thefontThickness):
     for i in range(totalN):
         # set option labels on topFrame to make them not transparent
         if i < len(theLabelsOptions):
-            prettyPrintInCamera(theTopFrame, theLabelsOptions[i], centerOfContours[i], color)
+            prettyPrintInCamera(theTopFrame, theLabelsOptions[i], centerOfContours[i], color,thefontScale,thefontThickness)
         else:
             if i< (len(theLabelsOptions)+len(theLabelsList)):
-                prettyPrintInCamera(theTopFrame,  theLabelsList[i-len(theLabelsOptions)], centerOfContours[i], redFrameColor)
+                prettyPrintInCamera(theTopFrame,  theLabelsList[i-len(theLabelsOptions)], centerOfContours[i], redFrameColor,thefontScale,thefontThickness)
 
 
-def GetCharacterDivisionMenu(theLabelsList, totalN, theTopFrame, theCurrentSelection,centerOfContours,color,lettersColor):
+def GetCharacterDivisionMenu(theLabelsList, totalN, theTopFrame, theCurrentSelection,centerOfContours,color,lettersColor,thefontScale,thefontThickness):
     createdLabel = []
     lettersPerArea = math.ceil(len(theLabelsList) / (totalN - len(labelsLettersMenu)))
     if lettersPerArea>0:
         for i in range(totalN):
             # set option labels on topFrame to make them not transparent
             if i < len(labelsLettersMenu):
-                prettyPrintInCamera(theTopFrame, labelsLettersMenu[i], centerOfContours[i],color)
+                prettyPrintInCamera(theTopFrame, labelsLettersMenu[i], centerOfContours[i],color,thefontScale,thefontThickness)
             else:
                 # divide ABC between remaining areas
                 startABCIndex = int((i - len(labelsLettersMenu)) * lettersPerArea)
@@ -832,16 +869,16 @@ def GetCharacterDivisionMenu(theLabelsList, totalN, theTopFrame, theCurrentSelec
         for loopText in range(len(labelsLettersMenu),totalN):
             #print(loopText)
             if isinstance(createdLabel[loopText - len(labelsLettersMenu)], str):
-                prettyPrintInCamera(theTopFrame, createdLabel[loopText-len(labelsLettersMenu)], centerOfContours[loopText], lettersColor)
+                prettyPrintInCamera(theTopFrame, createdLabel[loopText-len(labelsLettersMenu)], centerOfContours[loopText], lettersColor,thefontScale,thefontThickness)
             elif isinstance(createdLabel[loopText - len(labelsLettersMenu)][0], str):
-                prettyPrintInCamera(theTopFrame, createdLabel[loopText-len(labelsLettersMenu)][0], centerOfContours[loopText], lettersColor)
+                prettyPrintInCamera(theTopFrame, createdLabel[loopText-len(labelsLettersMenu)][0], centerOfContours[loopText], lettersColor,thefontScale,thefontThickness)
                 #print(f"createdLabel: {createdLabel}")
     return createdLabel,theCurrentSelection
 
-def prettyPrintInCamera(topFrame, text, theOrg, theColor, lineType=cv2.LINE_AA, onCenter=False):
+def prettyPrintInCamera(topFrame, text, theOrg, theColor, thefontScale,thefontThickness,lineType=cv2.LINE_AA, onCenter=False):
     text_size=0
     if text !="":
-        text_size = cv2.getTextSize(text, font, FaceTracker.fontScale, FaceTracker.fontThickness)[0]
+        text_size = cv2.getTextSize(text, font, thefontScale, thefontThickness)[0]
         paddingPercentage=.1
         proportionalPadding=[math.floor(text_size[0]*paddingPercentage),math.floor(text_size[1]*paddingPercentage)]
         # Create a background rectangle
@@ -853,45 +890,48 @@ def prettyPrintInCamera(topFrame, text, theOrg, theColor, lineType=cv2.LINE_AA, 
             pixelsToSubstract = (math.floor(text_size[0]/2),math.floor(text_size[1]/2))
             cv2.rectangle(topFrame, (background_x1-pixelsToSubstract[0], background_y1-pixelsToSubstract[1]),
                           (background_x2-pixelsToSubstract[0], background_y2-pixelsToSubstract[1]), (255, 255, 255), -1)
-            cv2.putText(topFrame, text, (theOrg[0]-pixelsToSubstract[0],theOrg[1]-pixelsToSubstract[1]), font, FaceTracker.fontScale, theColor, fontThickness, lineType)
+            cv2.putText(topFrame, text, (theOrg[0]-pixelsToSubstract[0],theOrg[1]-pixelsToSubstract[1]), font, thefontScale, theColor, thefontThickness, lineType)
         else:
             cv2.rectangle(topFrame, (background_x1, background_y1), (background_x2, background_y2), (255, 255, 255), -1)
-            cv2.putText(topFrame, text, theOrg, font, FaceTracker.fontScale, theColor, fontThickness,lineType)
+            cv2.putText(topFrame, text, theOrg, font, thefontScale, theColor, thefontThickness,lineType)
     return text_size
 
 
-def GetMainMenu(totalN,theTopFrame,theCurrentSelection,centerOfContours,color,lettersColor):
+def GetMainMenu(totalN,theTopFrame,theCurrentSelection,centerOfContours,color,lettersColor,thefontScale,thefontThickness,
+                thelabelsNumbers,thelabelsSpecial,thelabelsABC):
 
     createdLabel = []
     for i in range(totalN):
         # set option labels on topFrame to make them not transparent
         if (totalN <= len(labelsMainMenu) and theCurrentSelection[1] == "MultipleNumbers"):
-            createdLabel.append(labelsNumbers)
+            createdLabel.append(thelabelsNumbers)
         elif (totalN <= len(labelsMainMenu) and theCurrentSelection[1] == "MultipleSpecialChars"):
-            createdLabel.append(labelsSpecial)
+            createdLabel.append(thelabelsSpecial)
         elif(totalN<=len(labelsMainMenu) and theCurrentSelection[1]=="MultipleLetters"):
-            createdLabel.append(labelsABC)
+            createdLabel.append(thelabelsABC)
         elif(totalN<=len(labelsMainMenu)):
-            createdLabel.append(labelsABC)
+            createdLabel.append(thelabelsABC)
         if i < len(labelsMainMenu):
-            prettyPrintInCamera(theTopFrame, labelsMainMenu[i], centerOfContours[i], color, cv2.LINE_AA)
+            prettyPrintInCamera(theTopFrame, labelsMainMenu[i], centerOfContours[i], color,thefontScale,thefontThickness, cv2.LINE_AA)
         else:
             # divide ABC between remaining areas
-            lettersPerArea = math.ceil(len(labelsABC) / (totalN - len(labelsMainMenu)))
+            lettersPerArea = math.ceil(len(thelabelsABC) / (totalN - len(labelsMainMenu)))
             startABCIndex = math.floor((i - len(labelsMainMenu)) * lettersPerArea)
             endABCIndex = math.ceil((i - len(labelsMainMenu)) * lettersPerArea + lettersPerArea)
-            createdLabel.append(labelsABC[startABCIndex:endABCIndex])
+            createdLabel.append(thelabelsABC[startABCIndex:endABCIndex])
             prettyPrintInCamera(theTopFrame, createdLabel[i - len(labelsMainMenu)], centerOfContours[i], lettersColor, cv2.LINE_AA)
     while len(createdLabel) < totalN:
         createdLabel.append("")
     return createdLabel
 
-def GetSelectionLogic(theTopFrame,dimensionsTop,theSelectionCurrentTime,theCurrentSelection,theSelected,thePrevSelected,ellipsePoly,nosePosition,contours):
-    if FaceTracker.currentSelection[1]=="MouseControl":
+def GetSelectionLogic(theTopFrame,dimensionsTop,theSelectionCurrentTime,theselectionType,theCurrentSelection
+                      ,theSelected,thePrevSelected,ellipsePoly,nosePosition,contours,thetimeOnLocation,theredFrameColor,
+                      thefontScale,thefontThickness,thefps,flagSameSelection,thewhatsWritten,theselectionWaitTime):
+    if theCurrentSelection[1]=="MouseControl":
         theSelected = -1
         noseOnNeutral = cv2.pointPolygonTest(ellipsePoly, nosePosition, False)  # 0,1 is on contour,-1 is not on contour
         if noseOnNeutral < 0:
-            # print(f'GetSelectionLogic: timeOnLocation: {FaceTracker.timeOnLocation}, theSelectionCurrentTime: {theSelectionCurrentTime}')
+            # print(f'GetSelectionLogic: timeOnLocation: {thetimeOnLocation}, theSelectionCurrentTime: {theSelectionCurrentTime}')
             for idx, contour in enumerate(contours):
                 noseOptionResult = cv2.pointPolygonTest(contour, nosePosition, False)
                 if noseOptionResult > 0:
@@ -901,7 +941,7 @@ def GetSelectionLogic(theTopFrame,dimensionsTop,theSelectionCurrentTime,theCurre
                         theSelectionCurrentTime = 0
                     else:
                         if theSelectionCurrentTime <= .1:
-                            theSelectionCurrentTime += selectionCurrentTime + 1 / fps
+                            theSelectionCurrentTime += selectionCurrentTime + 1 / thefps
                         else:  # time has passed
                             print(f"Timer Reset, selected {theCurrentSelection[0]}")
                             theCurrentSelection[0] = thePrevSelected
@@ -911,11 +951,11 @@ def GetSelectionLogic(theTopFrame,dimensionsTop,theSelectionCurrentTime,theCurre
         else:
             theCurrentSelection[0] = -1
 
-    elif FaceTracker.selectionType=='TimedOnLocation':
+    elif theselectionType=='TimedOnLocation':
         theSelected = -1
         noseOnNeutral = cv2.pointPolygonTest(ellipsePoly, nosePosition, False)  # 0,1 is on contour,-1 is not on contour
         if noseOnNeutral<0:
-            #print(f'GetSelectionLogic: timeOnLocation: {FaceTracker.timeOnLocation}, theSelectionCurrentTime: {theSelectionCurrentTime}')
+            #print(f'GetSelectionLogic: timeOnLocation: {thetimeOnLocation}, theSelectionCurrentTime: {theSelectionCurrentTime}')
             for idx, contour in enumerate(contours):
                 noseOptionResult = cv2.pointPolygonTest(contour, nosePosition, False)
                 if noseOptionResult > 0:
@@ -923,23 +963,27 @@ def GetSelectionLogic(theTopFrame,dimensionsTop,theSelectionCurrentTime,theCurre
                     if thePrevSelected!=theSelected:
                         thePrevSelected = theSelected
                         theSelectionCurrentTime=0
+                        flagSameSelection = False
                     else:
-                        if theSelectionCurrentTime <= FaceTracker.timeOnLocation:
-                            theSelectionCurrentTime += selectionCurrentTime + 1 / fps
-                            desiredText=f'Selection on {(FaceTracker.timeOnLocation-theSelectionCurrentTime):.1f}'
-                            #print(desiredText)#topFrame,dimensionsTop,
-                            (text_width, text_height), baseline = cv2.getTextSize(whatsWritten, font, fontScale, fontThickness)
-                            FaceTracker.prettyPrintInCamera(theTopFrame, desiredText,
-                                                            (int(dimensionsTop[1] / 2), int(dimensionsTop[0]+int(text_height*0.4)-(text_height*1.6*2))),#-3 is padding
-                                                            FaceTracker.redFrameColor,
-                                                            onCenter=True)  # x and y are inverted in call
-                        else:  # time has passed
-                            print(f"Timer Reset, selected {theCurrentSelection[0]}")
-                            theCurrentSelection[0] = thePrevSelected
-                            theSelectionCurrentTime = 0
-                            print("Selected: " + str(theCurrentSelection[0]))
+                        if  flagSameSelection==False:
+                            if theSelectionCurrentTime <= thetimeOnLocation:
+                                theSelectionCurrentTime += selectionCurrentTime + 1 / thefps
+                                desiredText=f'Selection on {(thetimeOnLocation-theSelectionCurrentTime):.1f}'
+                                #print(desiredText)#topFrame,dimensionsTop,
+                                (text_width, text_height), baseline = cv2.getTextSize(thewhatsWritten, font, thefontScale, thefontThickness)
+                                prettyPrintInCamera(theTopFrame, desiredText,
+                                                                (int(dimensionsTop[1] / 2), int(dimensionsTop[0]+int(text_height*0.4)-(text_height*1.6*2))), #-3 is padding
+                                                                 theredFrameColor,thefontScale,thefontThickness,
+                                                                onCenter=True)  # x and y are inverted in call
+                            else:  # time has passed
+                                #print(f"Timer Reset, selected: {theCurrentSelection[0]}")
+                                theCurrentSelection[0] = thePrevSelected
+                                theSelectionCurrentTime = 0
+                                flagSameSelection = True
                     break
-
+        else:
+            if noseOnNeutral >= 0:
+                flagSameSelection=False
     else:#BackToCenter or any other
         noseOnNeutral = cv2.pointPolygonTest(ellipsePoly, nosePosition, False)  # 0,1 is on contour
         if noseOnNeutral >= 0:  # inside of ellipse
@@ -951,14 +995,14 @@ def GetSelectionLogic(theTopFrame,dimensionsTop,theSelectionCurrentTime,theCurre
             for idx, contour in enumerate(contours):
                 noseOptionResult = cv2.pointPolygonTest(contour, nosePosition, False)
                 if noseOptionResult > 0:
-                    theSelectionCurrentTime = selectionCurrentTime + 1 / fps
+                    theSelectionCurrentTime = selectionCurrentTime + 1 / thefps
                     theSelected = idx
                     if thePrevSelected != theSelected:
                         # change timer depending on area change
                         theSelectionCurrentTime = 0
                         thePrevSelected=theSelected
                         # print("Timer Reset Area Changed")
-                    elif theSelectionCurrentTime >= selectionWaitTime:
+                    elif theSelectionCurrentTime >= theselectionWaitTime:
                         theSelected = idx
                         thePrevSelected = theSelected
                         break
@@ -967,22 +1011,41 @@ def GetSelectionLogic(theTopFrame,dimensionsTop,theSelectionCurrentTime,theCurre
             print("Selected: " + str(theCurrentSelection[0]))
             thePrevSelected = theSelected
 
-    return theSelected,thePrevSelected,theCurrentSelection,theSelectionCurrentTime
+    return theSelected,thePrevSelected,theCurrentSelection,theSelectionCurrentTime,flagSameSelection
+
 
 
 def mainLoop(queue):
+    # local variables initiallized from their global counterparts:
+    thewhatsWritten = ""
+    thelastWord = seedWord
+    theprevLastWord = ""
+    thecurrentSelection = [-1,"MainMenu"]
+    theprev_frame_time = 0
+    thefps = 0
+    thecreatedLabelsList = createdLabelsList
+    theselected=-1
+    theprevSelected=theselected
+    theselectionCurrentTime=selectionCurrentTime
+    thelabelsLMM=labelsLMM
+    flagSameSelection=False
+    thestartTime=0
+    thellmIsWorkingFlag=False
 
-    (selectionType,timeOnLocation,
-     centerSizeX,centerSizeY,offsetX,offsetY,
-     totalOptionsN,mouseSpeed,selectionWaitTime,
-     labelsABC,labelsNumbers,labelsSpecial,labelsQuick,
-     fontScale,fontThickness,
-     camSizeX,camSizeY,showFPS,showWritten,
-     llmContextSize,llmBatchSize,llmWaitTime,
-     maxWhatsWrittenSize,showWrittenMode,seedWord,
-     LlmService,LlmKey)=GetConfigSettings()
+    #variables from config:
+    (theselectionType,thetimeOnLocation,
+     theignoreGuiAngles, theignoreAngleArc,
+     thettsRate, thettsVolume, thettsVoiceType,
+     thecenterSizeX,thecenterSizeY,theoffsetX,theoffsetY,
+     thetotalOptionsN,themouseSpeed,theselectionWaitTime,
+     thelabelsABC,thelabelsNumbers,thelabelsSpecial,thelabelsQuick,
+     thefontScale,thefontThickness,
+     thecamSizeX,thecamSizeY,theshowFPS,theshowWritten,
+     thellmContextSize,thellmBatchSize,thellmWaitTime,
+     themaxWhatsWrittenSize,theshowWrittenMode,theseedWord,
+     theLlmService,theLlmKey)=GetConfigSettings()
 
-    #FaceTracker.llm=loadLLM("zephyr-7b-beta.Q4_K_M.gguf",llmContextSize,llmBatchSize)
+    #thellm=loadLLM("zephyr-7b-beta.Q4_K_M.gguf",llmContextSize,llmBatchSize)
     mpDraw = mp.solutions.drawing_utils
     mpFaceMesh = mp.solutions.face_mesh
     faceMesh = mpFaceMesh.FaceMesh(max_num_faces=1)
@@ -996,8 +1059,8 @@ def mainLoop(queue):
         #print("SourceTop: "+str(sourceTop)+", sourceSide: "+str(sourceSide))
         cameraTopView = cv2.VideoCapture(sourceTop)
         # cameraTopView.set(cv2.CAP_PROP_FPS, 30.0)
-        cameraTopView.set(cv2.CAP_PROP_FRAME_WIDTH, camSizeX);#640
-        cameraTopView.set(cv2.CAP_PROP_FRAME_HEIGHT, camSizeY);#480
+        cameraTopView.set(cv2.CAP_PROP_FRAME_WIDTH, thecamSizeX);#640
+        cameraTopView.set(cv2.CAP_PROP_FRAME_HEIGHT, thecamSizeY);#480
     else:
         cameraTopView = cv2.imread("testImages/Sofa2.jpg")
 
@@ -1040,10 +1103,10 @@ def mainLoop(queue):
 
                         #circle on center of face
                         sizeOfFace=math.sqrt(math.pow(shape[1]*(faceXmax-faceXmin),2)+math.pow(shape[0]*(faceYmax-faceYmin),2))
-                        radiusAsPercentageX=int((centerSizeX/2)/100*sizeOfFace)
-                        radiusAsPercentageY= int((centerSizeY/2)/100 * sizeOfFace)
-                        offsetAsPixelsX=int((offsetX/2)/100*sizeOfFace)
-                        offsetAsPixelsY = int((offsetY/2) / 100 * sizeOfFace)
+                        radiusAsPercentageX=int((thecenterSizeX/2)/100*sizeOfFace)
+                        radiusAsPercentageY= int((thecenterSizeY/2)/100 * sizeOfFace)
+                        offsetAsPixelsX=int((theoffsetX/2)/100*sizeOfFace)
+                        offsetAsPixelsY = int((theoffsetY/2) / 100 * sizeOfFace)
                         #print(f"offsetAsPixels: ({offsetAsPixelsX},{offsetAsPixelsY})")
                         centerOfFaceX = centerOfFaceX+offsetAsPixelsX
                         centerOfFaceY = centerOfFaceY+offsetAsPixelsY
@@ -1053,23 +1116,49 @@ def mainLoop(queue):
                         # ---------GUI--------------
                         # create the n zones for buttons, geometry must be created by placing points in clockwise order
                         # -------------------------
-                        ellipsePoly,contours,centerOfContours=GetGUI(uiFrame,radiusAsPercentageX,radiusAsPercentageY,totalOptionsN,centerOfFaceX,centerOfFaceY,nosePosition)
-                        FaceTracker.currentSelection,FaceTracker.createdLabelsList,topFrame = GetMenuSystem (queue,topFrame,FaceTracker.totalOptionsN,
-                                                                                                    FaceTracker.currentSelection,FaceTracker.createdLabelsList,
-                                                                                                    centerOfContours,color,lettersColor,dimensionsTop)
+                        ellipsePoly,contours,centerOfContours=GetGUI(uiFrame,radiusAsPercentageX,radiusAsPercentageY,thetotalOptionsN,centerOfFaceX,centerOfFaceY,nosePosition,theignoreGuiAngles,theignoreAngleArc)
+                        thecurrentSelection,thecreatedLabelsList,topFrame,thelastWord,thelabelsLMM,thewhatsWritten = GetMenuSystem (queue,topFrame,thetotalOptionsN,
+                                                                                            thecurrentSelection,thecreatedLabelsList,
+                                                                                            centerOfContours,color,lettersColor,dimensionsTop,theshowFPS,thestartTime,
+                                                                                            thelastWord,theprevLastWord,thellmIsWorkingFlag,
+                                                                                            theLlmService, theLlmKey,
+                                                                                            thellmWaitTime, font,
+                                                                                            thefontScale,
+                                                                                            thefontThickness,
+                                                                                            redFrameColor,
+                                                                                            thewhatsWritten,thefps,thelabelsLMM,thelastWord,
+                                                                                            thelabelsQuick,
+                                                                                            thelabelsABC,
+                                                                                            thelabelsNumbers,
+                                                                                            thelabelsSpecial,
+                                                                                            themouseSpeed,theshowWritten,theshowWrittenMode,themaxWhatsWrittenSize,
+                                                                                            thetotalOptionsN,
+                                                                                            thellmContextSize,
+                                                                                            thellmBatchSize
+                                                                                           )
+
                         # -------------------------
                         # Selection Logic----------
                         # -------------------------
-                        FaceTracker.selected,FaceTracker.prevSelected,FaceTracker.currentSelection,FaceTracker.selectionCurrentTime =\
-                            GetSelectionLogic(topFrame,dimensionsTop,FaceTracker.selectionCurrentTime,FaceTracker.currentSelection,FaceTracker.selected,FaceTracker.prevSelected,ellipsePoly,nosePosition,contours)
+                        theselected,theprevSelected,thecurrentSelection,theselectionCurrentTime,flagSameSelection = GetSelectionLogic(
+                            topFrame,dimensionsTop,theselectionCurrentTime,theselectionType,
+                            thecurrentSelection,theselected,theprevSelected,ellipsePoly,nosePosition,contours,
+                            thetimeOnLocation,redFrameColor,thefontScale,thefontThickness,thefps,flagSameSelection,
+                            thewhatsWritten,theselectionWaitTime)
+
+                        if thelastWord != theprevLastWord:
+                            thewhatsWritten = thewhatsWritten + " " + thelastWord
+                            print(f'speaking: {thelastWord}')
+                            speak_non_blocking(thelastWord,thettsRate, thettsVolume, thettsVoiceType,)
+                            theprevLastWord = thelastWord
 
 
         # FPS calculations
-        FaceTracker.new_frame_time = time.time()
-        if FaceTracker.new_frame_time != FaceTracker.prev_frame_time:
-            FaceTracker.prevFps = FaceTracker.fps
-            FaceTracker.fps = 1 / (FaceTracker.new_frame_time - FaceTracker.prev_frame_time)
-            FaceTracker.prev_frame_time = FaceTracker.new_frame_time
+        thenew_frame_time = time.time()
+        if thenew_frame_time != theprev_frame_time:
+            theprevFps = thefps
+            thefps = 1 / (thenew_frame_time - theprev_frame_time)
+            theprev_frame_time = thenew_frame_time
 
         #Display
         #cv2.imshow("top frame", topFrame)
@@ -1077,9 +1166,11 @@ def mainLoop(queue):
         uiFrame = cv2.addWeighted(uiFrame, alpha, combinedCalibImage, 1 - alpha, 0)
         cv2.imshow("Facial Control HMI", uiFrame)
 
+
+
 if __name__ == '__main__':
     multiprocessing.freeze_support()  # Only necessary if using PyInstaller
-    FaceTracker.llmIsWorkingFlag=True
+    thellmIsWorkingFlag=True
     queue = multiprocessing.Queue()
     p = multiprocessing.Process(target=mainLoop, args=(queue,))
     p.start()
