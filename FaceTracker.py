@@ -836,7 +836,7 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
         print(f"LLM Call took: {totalTime} seconds")
         thelabelsLMM = result
 
-    return theCurrentSelection,theCreatedLabelList,theprevCreatedLabelsList, theTopFrame,thelastWord,thelabelsLMM,thewhatsWritten
+    return theCurrentSelection,theCreatedLabelList,theprevCreatedLabelsList, theTopFrame,thelastWord,thelabelsLMM,thewhatsWritten,thestartTime
 
 def DisplayMouseMenu(theLabelsList,theLabelsOptions,totalN,theTopFrame,centerOfContours,color,thefontScale,thefontThickness):
     for i in range(totalN):
@@ -1046,7 +1046,7 @@ def mainLoop(queue):
     theselectionCurrentTime=selectionCurrentTime
     thelabelsLMM=labelsLMM
     flagSameSelection=False
-    thestartTime=0
+    thestartTime=time.time()
     thellmIsWorkingFlag=False
 
     #variables from config:
@@ -1134,7 +1134,7 @@ def mainLoop(queue):
                         # create the n zones for buttons, geometry must be created by placing points in clockwise order
                         # -------------------------
                         ellipsePoly,contours,centerOfContours=GetGUI(uiFrame,radiusAsPercentageX,radiusAsPercentageY,thetotalOptionsN,centerOfFaceX,centerOfFaceY,nosePosition,theignoreGuiAngles,theignoreAngleArc)
-                        thecurrentSelection,thecreatedLabelsList,theprevCreatedLabelsList,topFrame,thelastWord,thelabelsLMM,thewhatsWritten = GetMenuSystem (queue,topFrame,thetotalOptionsN,
+                        thecurrentSelection,thecreatedLabelsList,theprevCreatedLabelsList,topFrame,thelastWord,thelabelsLMM,thewhatsWritten,thestartTime = GetMenuSystem (queue,topFrame,thetotalOptionsN,
                                                                                             thecurrentSelection,thecreatedLabelsList,theprevCreatedLabelsList,
                                                                                             centerOfContours,color,lettersColor,dimensionsTop,theshowFPS,thestartTime,
                                                                                             thelastWord,theprevLastWord,thellmIsWorkingFlag,
