@@ -22,12 +22,16 @@ import re
 
 import multiprocessing
 import socket
+from turtledemo.penrose import start
+from venv import create
 
 import cv2
 import mediapipe as mp
 import time
 import sys
 import json
+
+from decorator import append
 from llama_cpp import Llama
 import openai
 from openai import OpenAI
@@ -54,7 +58,7 @@ TTSengine = pyttsx3.init()
 imageOrVideo = True
 
 #------------------
-labelsMainMenu=["Quick", "BackSpace","LLM","Space","Mouse", "ABC","Numbers","Special Chars"]
+#labelsMainMenu=["Quick", "BackSpace","LLM","Space","Mouse", "ABC","Numbers","Special Chars"]
 labelsLettersMenu=["Back", "BackSpace", "Main"]
 #------------------
 #------------------
@@ -190,9 +194,10 @@ def GetConfigSettings():
     centerSizePercentageY=20
     offsetPercentageX = 0
     offsetPercentageY = -20
-    totalOptionsN = 8
+    totalOptionsN = 3
     mouseSpeed = 5
     selectionWaitTime = 0.4
+    labelsMainMenu = ["Quick", "BackSpace", "LLM", "Space", "Mouse", "ABC", "Numbers", "Special Chars"]
     labelsABC = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     labelsNumbers="0123456789"
     labelsSpecial="`~!@#$%^&*()-_\"+[]\;',./<>?:{}="
@@ -249,6 +254,8 @@ def GetConfigSettings():
                 mouseSpeed = int(value)
             elif key == "selectionWaitTime":
                 selectionWaitTime = float(value)
+            elif key == "labelsMainMenu":
+                labelsMainMenu = value.split(',')
             elif key == "labelsABC":
                 labelsABC = value
             elif key == "labelsNumbers":
@@ -296,17 +303,20 @@ def GetConfigSettings():
           f", timeOnLocation: {timeOnLocation} \n"
           f", ignoreGuiAngles,ignoreAngleArc: ({ignoreGuiAngles}),{ignoreAngleArc}"
           f", ttsRate,ttsVolume,ttsVoiceType: ({ttsRate},{ttsVolume},{ttsVoiceType})"
-          f", offsetPercentage: ({offsetPercentageX},{offsetPercentageY}), \n"
+          f", offsetPercentage: ({offsetPercentageX},{offsetPercentageY}),\n"
           f", totalOptionsN: {totalOptionsN}, mouseSpeed: {mouseSpeed}, selectionWaitTime: {selectionWaitTime}\n"
-          f", labelsABC: {labelsABC}, labelsQuick: {labelsQuick}, \n"
+          f", labelsMainMenu: {labelsMainMenu}\n"
+          f", labelsABC: {labelsABC}, labelsQuick: {labelsQuick},\n"
           f", fontScale: {fontScale}, fontThickness: {fontThickness}, camSizeX: {camSizeX}, camSizeY: {camSizeY}\n"
           f", showFPS: {showFPS}, showWritten: {showWritten}\n"
           f", llmContextSize: {llmContextSize}, llmBatchSize: {llmBatchSize}, llmWaitTime: {llmWaitTime}\n"
           f", maxWhatsWrittenSize: {maxWhatsWrittenSize}, showWrittenMode: {showWrittenMode}\n"
           f", seedWord: {seedWord}, LlmService: {LlmService}, LlmKey: {LlmKey}\n")
-    return (selectionType,timeOnLocation,ignoreGuiAngles,ignoreAngleArc,ttsRate,ttsVolume,ttsVoiceType,centerSizePercentageX,centerSizePercentageY,offsetPercentageX,offsetPercentageY,totalOptionsN,mouseSpeed,selectionWaitTime,labelsABC,labelsNumbers,labelsSpecial,labelsQuick,fontScale\
-        ,fontThickness,camSizeX,camSizeY, showFPS, showWritten,llmContextSize,llmBatchSize,llmWaitTime
-            ,maxWhatsWrittenSize,showWrittenMode,seedWord,LlmService,LlmKey)
+    return (selectionType,timeOnLocation,ignoreGuiAngles,ignoreAngleArc,ttsRate,ttsVolume,ttsVoiceType,
+            centerSizePercentageX,centerSizePercentageY,offsetPercentageX,offsetPercentageY,
+            totalOptionsN,mouseSpeed,selectionWaitTime,labelsMainMenu,labelsABC,labelsNumbers,labelsSpecial,labelsQuick,
+            fontScale,fontThickness,camSizeX,camSizeY, showFPS, showWritten,llmContextSize,llmBatchSize,llmWaitTime,
+            maxWhatsWrittenSize,showWrittenMode,seedWord,LlmService,LlmKey)
 
 def GetAreaPoints(totalN, centerOfFaceX, centerOfFaceY, areaSize, theignoreGuiAngles, theignoreAngleArc, offsetAngleDeg=-15):
     # Ensure theignoreGuiAngles is a list
@@ -574,8 +584,8 @@ def showWhatsWritten(theTopFrame,dimensionsTop,thewhatsWritten, thefont,thefontS
 def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabelList,theprevCreatedLabelsList,centerOfContours,color,
                   lettersColor,dimensionsTop,theshowFPS,thestartTime,thelastWord,theprevLastWord,thellmIsWorkingFlag,
                   theLlmService,theLlmKey,thellmWaitTime,thefont, thefontScale, thefontThickness,theredFrameColor,
-                  thewhatsWritten,thefps,thelabelsLMM,theSeedWord,thelabelsQuick,thelabelsABC,thelabelsNumbers,thelabelsSpecial,
-                  themouseSpeed,theshowWritten,theshowWrittenMode,themaxWhatsWrittenSize,thetotalOptionsN,thellmContextSize,thellmBatchSize,prettyPrintRects,centerOfFace):
+                  thewhatsWritten,thefps,thelabelsLMM,theSeedWord,thelabelsQuick,thelabelsABC,labelsMainMenu,thelabelsNumbers,thelabelsSpecial,
+                  themouseSpeed,theshowWritten,theshowWrittenMode,themaxWhatsWrittenSize,thetotalOptionsN,paginationIndex,thellmContextSize,thellmBatchSize,prettyPrintRects,centerOfFace):
     if theshowFPS:
         cv2.putText(theTopFrame, "FPS: " + str(int(thefps)), org=(int(dimensionsTop[0] / 2), 20),
                     fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=0.5, color=(0, 255, 0), thickness=2)
@@ -601,7 +611,7 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
     #--------------------------
     if theCurrentSelection[0] < 0:#no option has been chosen
         if theCurrentSelection[1]=="MainMenu":
-            GetMainMenu(totalN, theTopFrame,theCurrentSelection,centerOfContours,color,lettersColor,thefontScale, thefontThickness,thelabelsNumbers, thelabelsSpecial,thelabelsABC,prettyPrintRects,centerOfFace)
+            GetMainMenu(totalN, theTopFrame,theCurrentSelection,centerOfContours,color,lettersColor,thefontScale, thefontThickness,thelabelsNumbers, thelabelsSpecial,thelabelsABC,labelsMainMenu,prettyPrintRects,centerOfFace,paginationIndex)
         elif(theCurrentSelection[1]=="MultipleLetters"):
             GetCharacterDivisionMenu(theCreatedLabelList, totalN, theTopFrame, theCurrentSelection,centerOfContours,color,lettersColor,thefontScale,thefontThickness,prettyPrintRects,centerOfFace)
         elif (theCurrentSelection[1] == "MultipleNumbers"):
@@ -615,52 +625,86 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
             theCurrentSelection[0] = -1
         elif (theCurrentSelection[1] == "LLM"):
             DisplayOtherMenus(thelabelsLMM,labelsLLMOptions, totalN, theTopFrame,centerOfContours,color,thefontScale,thefontThickness,prettyPrintRects,centerOfFace)
+        elif theCurrentSelection[1] == "NVC".lower():  # Non Verbal Communication: Emojis, custom images, etc!
+            print(f"Menu: {theCurrentSelection[1]}")
+        elif theCurrentSelection[1] == "More Options".lower():  # More Options
+            print(f"Menu: {theCurrentSelection[1]}")
+            GetMainMenu(totalN, theTopFrame, theCurrentSelection, centerOfContours, color, lettersColor, thefontScale,
+                        thefontThickness, thelabelsNumbers, thelabelsSpecial, thelabelsABC, labelsMainMenu,
+                        prettyPrintRects, centerOfFace, paginationIndex)
+        elif theCurrentSelection[1] == "Previous Options".lower():  # More Options
+            print(f"Menu: {theCurrentSelection[1]}")
+            GetMainMenu(totalN, theTopFrame, theCurrentSelection, centerOfContours, color, lettersColor, thefontScale,
+                        thefontThickness, thelabelsNumbers, thelabelsSpecial, thelabelsABC, labelsMainMenu,
+                        prettyPrintRects, centerOfFace, paginationIndex)
     else:  # if an option has been chosen
         if(theCurrentSelection[1]=="MainMenu"):
-            theCreatedLabelList=GetMainMenu(totalN,theTopFrame,theCurrentSelection,centerOfContours,color,lettersColor,thefontScale,thefontThickness,
-                                            thelabelsNumbers,thelabelsSpecial,thelabelsABC,prettyPrintRects,centerOfFace)
+            theCreatedLabelList,prettyPrintRects,paginationIndex=GetMainMenu(totalN,theTopFrame,theCurrentSelection,centerOfContours,color,lettersColor,thefontScale,thefontThickness,
+                                            thelabelsNumbers,thelabelsSpecial,thelabelsABC,labelsMainMenu,prettyPrintRects,centerOfFace,paginationIndex)
             # reset value and select new menu
-            if theCurrentSelection[0]==0:#Quick
+            selectedSelectionSlot=theCreatedLabelList[theCurrentSelection[0]].lower()
+            print(f"selectedSelectionSlot: {theCreatedLabelList[theCurrentSelection[0]].lower()}")
+            if selectedSelectionSlot=="Quick".lower():#Quick
                 print("Menu: " + str(labelsMainMenu[theCurrentSelection[0]]))
                 theCurrentSelection = [-1, "Quick"]
-            elif theCurrentSelection[0] == 1:#Backspace
+            elif selectedSelectionSlot== "BackSpace".lower():#Backspace
                 theCurrentSelection[0] = -1
                 print("pressed: Backspace")
                 keyboard.press(Key.backspace)
                 keyboard.release(Key.backspace)
                 if len(thewhatsWritten)>0:
                     thewhatsWritten = thewhatsWritten[:-1]
-            elif theCurrentSelection[0]==2:#LLM
+            elif selectedSelectionSlot=="LLM".lower():#LLM
                 print(f"Menu: {str(labelsMainMenu[theCurrentSelection[0]])}, selection: {theCurrentSelection[0]}")
                 theCurrentSelection = [-1, "LLM"]
-            elif theCurrentSelection[0] == 3:#Space
+            elif selectedSelectionSlot=="Space".lower():#Space
                 theCurrentSelection[0] = -1
                 print("pressed: Space")
                 keyboard.press(Key.space)
                 keyboard.release(Key.space)
-                #thewhatsWritten = thewhatsWritten+" "
+                thewhatsWritten = thewhatsWritten+" "
                 last_word = thewhatsWritten.split()[-1] if thewhatsWritten.strip() else None
                 if last_word is not None:
                     thelastWord=last_word
-            elif theCurrentSelection[0] == 4:#Mouse Control
+            elif selectedSelectionSlot=="Mouse".lower():#Mouse Control
                 theCurrentSelection = [-1, "MouseControl"]
                 print("menu: " + str(labelsMainMenu[theCurrentSelection[0]]))
-            elif theCurrentSelection[0] == 5:#ABC
+            elif selectedSelectionSlot == "ABC".lower():#ABC
                 print(f"Letters Menu: {thelabelsABC}")
                 theCurrentSelection = [-1,"MultipleLetters"]
                 theCreatedLabelList, theCurrentSelection,prettyPrintRects = GetCharacterDivisionMenu(
                     thelabelsABC, totalN, theTopFrame, theCurrentSelection,centerOfContours,color,lettersColor,thefontScale,thefontThickness,prettyPrintRects,centerOfFace)
-            elif theCurrentSelection[0] == 6:  # Numbers
+            elif selectedSelectionSlot == "Numbers".lower():  # Numbers
                 print(f"Letters Menu: {thelabelsNumbers}")
                 theCurrentSelection = [-1,"MultipleNumbers"]
                 theCreatedLabelList, theCurrentSelection,prettyPrintRects = GetCharacterDivisionMenu(
                     thelabelsNumbers, totalN, theTopFrame, theCurrentSelection,centerOfContours,color,lettersColor,thefontScale,thefontThickness,prettyPrintRects,centerOfFace)
-            elif theCurrentSelection[0] == 7:#Special Characters
+            elif selectedSelectionSlot == "Special Chars".lower():#Special Characters
                 print(f"Letters Menu: {thelabelsSpecial}")
                 theCurrentSelection = [-1,"MultipleSpecialChars"]
                 theCreatedLabelList = thelabelsSpecial
                 theCreatedLabelList, theCurrentSelection,prettyPrintRects = GetCharacterDivisionMenu(
                     thelabelsSpecial, totalN, theTopFrame, theCurrentSelection,centerOfContours,color,lettersColor,thefontScale,thefontThickness,prettyPrintRects,centerOfFace)
+            elif selectedSelectionSlot == "NVC".lower():#Non Verbal Communication: Emojis, custom images, etc!
+                print(f"Menu: {selectedSelectionSlot}")
+                theCurrentSelection = [-1,"NVC"]
+            elif selectedSelectionSlot == "More Options".lower():#More Options
+                theCurrentSelection = [-1,"MainMenu"]
+                paginationIndex=paginationIndex+1
+                if (paginationIndex * totalN-(2*paginationIndex)) >= len(labelsMainMenu):
+                    paginationIndex = 0
+                print(f"Menu: {selectedSelectionSlot}, pagination: {paginationIndex}")
+            elif selectedSelectionSlot == "Previous Options".lower():  # More Options
+                theCurrentSelection = [-1, "MainMenu"]
+                paginationIndex=paginationIndex-1
+                if paginationIndex<0:
+                    paginationIndex= len(labelsMainMenu) / (totalN - 2)#math.floor((len(labelsMainMenu)*2)/totalN)
+                    if paginationIndex.is_integer():
+                        paginationIndex=int(paginationIndex-1)
+                    else:
+                        paginationIndex=math.floor(paginationIndex)
+                print(f"Menu: {selectedSelectionSlot}, pagination: {paginationIndex}")
+
         elif(theCurrentSelection[1]=="MouseControl"):
             DisplayMouseMenu(labelsMouse, labelsMouseMenu, totalN, theTopFrame,centerOfContours,color,thefontScale,thefontThickness,prettyPrintRects,centerOfFace)
             #"Click","Back","Double Click","RightClick"
@@ -718,7 +762,6 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
                     if len(theprevCreatedLabelsList) >= 2:
                         theCreatedLabelList=theprevCreatedLabelsList.pop()
                         theCreatedLabelList = ''.join(filter(None, theCreatedLabelList))
-                        #print(f'thePop: {theCreatedLabelList}')
                     else:
                         if theCurrentSelection[1]=="MultipleLetters":
                             theCreatedLabelList=thelabelsABC
@@ -838,7 +881,8 @@ def GetMenuSystem(queue, theTopFrame, totalN,theCurrentSelection,theCreatedLabel
         print(f"LLM Call took: {totalTime} seconds")
         thelabelsLMM = result
 
-    return theCurrentSelection,theCreatedLabelList,theprevCreatedLabelsList, theTopFrame,thelastWord,thelabelsLMM,thewhatsWritten,thestartTime,thellmIsWorkingFlag,prettyPrintRects
+    return (theCurrentSelection,theCreatedLabelList,theprevCreatedLabelsList, theTopFrame,thelastWord,thelabelsLMM,
+            thewhatsWritten,thestartTime,thellmIsWorkingFlag,prettyPrintRects,paginationIndex)
 
 def DisplayMouseMenu(theLabelsList,theLabelsOptions,totalN,theTopFrame,centerOfContours,color,thefontScale,thefontThickness,prettyPrintRects,centerOfFace):
     for i in range(totalN):
@@ -928,8 +972,6 @@ def move_rect(rect, direction, n):
 
     return int(x1_new), int(y1_new), int(x2_new), int(y2_new)
 
-import cv2
-
 def put_centered_text(img, text, rect, font=cv2.FONT_HERSHEY_SIMPLEX, font_scale=0.7, color=(255,255,255), thickness=1,lineType=cv2.LINE_AA):
     x1, y1, x2, y2 = rect
 
@@ -946,7 +988,6 @@ def put_centered_text(img, text, rect, font=cv2.FONT_HERSHEY_SIMPLEX, font_scale
 
     # Put the text
     cv2.putText(img, text, (text_x, text_y), font, font_scale, color, thickness, lineType)
-
 
 def get_directionVector(rect, target_point):
     x1, y1, x2, y2 = rect
@@ -1006,9 +1047,27 @@ def prettyPrintInCamera(topFrame, text, theOrg, theColor, thefontScale,thefontTh
 
 
 def GetMainMenu(totalN,theTopFrame,theCurrentSelection,centerOfContours,color,lettersColor,thefontScale,thefontThickness,
-                thelabelsNumbers,thelabelsSpecial,thelabelsABC,prettyPrintRects,centerOfFace):
+                thelabelsNumbers,thelabelsSpecial,thelabelsABC,originalLabelsMainMenu,prettyPrintRects,centerOfFace,paginationIndex):
 
     createdLabel = []
+    #create pagination if total menu options wont fit
+    if totalN<len(originalLabelsMainMenu):
+        startIndex = paginationIndex * totalN-(2*(paginationIndex))
+        endIndex=startIndex+totalN
+        labelsMainMenu = originalLabelsMainMenu[startIndex:endIndex]
+        labelsMainMenu=["Previous Options"]+labelsMainMenu
+        labelsMainMenu.append("More Options")
+
+
+        while len(labelsMainMenu) > totalN:
+            labelsMainMenu.pop(-2)
+            endIndex = endIndex - 1
+        while len(labelsMainMenu) < totalN:
+            labelsMainMenu[-1]=""
+            labelsMainMenu.append("More Options")
+
+        #print(f"paginationIndex: {paginationIndex}, startIndex: {startIndex}, endIndex: {endIndex},totalN: {totalN}, labelsMainMenu: {labelsMainMenu} ")
+
     for i in range(totalN):
         # set option labels on topFrame to make them not transparent
         if (totalN <= len(labelsMainMenu) and theCurrentSelection[1] == "MultipleNumbers"):
@@ -1017,8 +1076,12 @@ def GetMainMenu(totalN,theTopFrame,theCurrentSelection,centerOfContours,color,le
             createdLabel.append(thelabelsSpecial)
         elif(totalN<=len(labelsMainMenu) and theCurrentSelection[1]=="MultipleLetters"):
             createdLabel.append(thelabelsABC)
+        elif (theCurrentSelection[1] == "MainMenu"):
+            createdLabel=labelsMainMenu
         elif(totalN<=len(labelsMainMenu)):
             createdLabel.append(thelabelsABC)
+
+
         if i < len(labelsMainMenu):
             text_size,prettyPrintRects=prettyPrintInCamera(theTopFrame, labelsMainMenu[i], centerOfContours[i], color,thefontScale,thefontThickness,prettyPrintRects,centerOfFace, cv2.LINE_AA)
         else:
@@ -1027,10 +1090,11 @@ def GetMainMenu(totalN,theTopFrame,theCurrentSelection,centerOfContours,color,le
             startABCIndex = math.floor((i - len(labelsMainMenu)) * lettersPerArea)
             endABCIndex = math.ceil((i - len(labelsMainMenu)) * lettersPerArea + lettersPerArea)
             createdLabel.append(thelabelsABC[startABCIndex:endABCIndex])
-            text_size,prettyPrintRects=prettyPrintInCamera(theTopFrame, createdLabel[i - len(labelsMainMenu)], centerOfContours[i], lettersColor,prettyPrintRects,centerOfFace, cv2.LINE_AA)
+            text_size,prettyPrintRects=prettyPrintInCamera(theTopFrame, createdLabel[i - len(labelsMainMenu)], centerOfContours[i],
+                                                           lettersColor,thefontScale,thefontThickness,prettyPrintRects,centerOfFace)
     while len(createdLabel) < totalN:
         createdLabel.append("")
-    return createdLabel,prettyPrintRects
+    return createdLabel,prettyPrintRects,paginationIndex
 
 def GetSelectionLogic(theTopFrame,dimensionsTop,theSelectionCurrentTime,theselectionType,theCurrentSelection
                       ,theSelected,thePrevSelected,ellipsePoly,nosePosition,contours,thetimeOnLocation,theredFrameColor,
@@ -1125,7 +1189,7 @@ def GetSelectionLogic(theTopFrame,dimensionsTop,theSelectionCurrentTime,theselec
 
 def mainLoop(queue):
     # local variables initiallized from their global counterparts:
-    thewhatsWritten = ""
+    thewhatsWritten = seedWord
     thelastWord = seedWord
     theprevLastWord = ""
     thecurrentSelection = [-1,"MainMenu"]
@@ -1137,6 +1201,7 @@ def mainLoop(queue):
     theprevSelected=theselected
     theselectionCurrentTime=selectionCurrentTime
     thelabelsLMM=labelsLMM
+    thelabelsMainMenu=""
     flagSameSelection=False
     thestartTime=time.time()
     thellmIsWorkingFlag=False
@@ -1148,7 +1213,7 @@ def mainLoop(queue):
      thettsRate, thettsVolume, thettsVoiceType,
      thecenterSizeX,thecenterSizeY,theoffsetX,theoffsetY,
      thetotalOptionsN,themouseSpeed,theselectionWaitTime,
-     thelabelsABC,thelabelsNumbers,thelabelsSpecial,thelabelsQuick,
+     thelabelsMainMenu,thelabelsABC,thelabelsNumbers,thelabelsSpecial,thelabelsQuick,
      thefontScale,thefontThickness,
      thecamSizeX,thecamSizeY,theshowFPS,theshowWritten,
      thellmContextSize,thellmBatchSize,thellmWaitTime,
@@ -1160,6 +1225,11 @@ def mainLoop(queue):
     mpFaceMesh = mp.solutions.face_mesh
     faceMesh = mpFaceMesh.FaceMesh(max_num_faces=1)
     drawSpecs = mpDraw.DrawingSpec(thickness=1, circle_radius=1)
+
+    #set pagination
+    paginationIndex=0
+
+
 
     #Set camera
     if imageOrVideo:
@@ -1231,7 +1301,7 @@ def mainLoop(queue):
                         # -------------------------
                         ellipsePoly,contours,centerOfContours=GetGUI(uiFrame,radiusAsPercentageX,radiusAsPercentageY,thetotalOptionsN,centerOfFaceX,centerOfFaceY,nosePosition,theignoreGuiAngles,theignoreAngleArc)
                         (thecurrentSelection,thecreatedLabelsList,theprevCreatedLabelsList,topFrame,thelastWord,
-                         thelabelsLMM,thewhatsWritten,thestartTime,thellmIsWorkingFlag,prettyPrintRects) = (
+                         thelabelsLMM,thewhatsWritten,thestartTime,thellmIsWorkingFlag,prettyPrintRects,paginationIndex) = (
                             GetMenuSystem (queue,topFrame,thetotalOptionsN,
                                         thecurrentSelection,thecreatedLabelsList,theprevCreatedLabelsList,
                                         centerOfContours,color,lettersColor,dimensionsTop,theshowFPS,thestartTime,
@@ -1244,10 +1314,11 @@ def mainLoop(queue):
                                         thewhatsWritten,thefps,thelabelsLMM,thelastWord,
                                         thelabelsQuick,
                                         thelabelsABC,
+                                        thelabelsMainMenu,
                                         thelabelsNumbers,
                                         thelabelsSpecial,
                                         themouseSpeed,theshowWritten,theshowWrittenMode,themaxWhatsWrittenSize,
-                                        thetotalOptionsN,
+                                        thetotalOptionsN,paginationIndex,
                                         thellmContextSize,
                                         thellmBatchSize,prettyPrintRects,centerOfFace
                                        ))
@@ -1262,7 +1333,7 @@ def mainLoop(queue):
                             thewhatsWritten,theselectionWaitTime,prettyPrintRects,centerOfFace)
 
                         if thelastWord != theprevLastWord:
-                            thewhatsWritten = thewhatsWritten + " " + thelastWord
+                            #thewhatsWritten = thewhatsWritten + " " + thelastWord
                             print(f'speaking: {thelastWord}')
                             speak_non_blocking(thelastWord,thettsRate, thettsVolume, thettsVoiceType,)
                             theprevLastWord = thelastWord

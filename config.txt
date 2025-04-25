@@ -24,9 +24,24 @@ centerSizePercentageX=25                        ###Percentage of face x
 centerSizePercentageY=25                        ###Percentage of face y
 offsetPercentageX=0                             ###Percentage of face x
 offsetPercentageY=10                            ###Percentage of face y
-totalOptionsN = 8                               ###how many split areas will appear in program. Default value of 8. Cannot be less than 8.
+totalOptionsN=5                                 ###how many split areas will appear in program. Default value of 8. Cannot be less than 3.
 mouseSpeed=5                                    ###How fast the mouse will move. Default value of 5
 selectionWaitTime=0.4                           ###How fast can options be selected, Default value of 0.4
+
+#------------------Menu Order
+#You can include any amount of these:
+###   "Quick": Activates submenu where Quick words can be selected. the quick words can be modified below.
+###   "BackSpace": Option where the "Backspace" key is virtually pressed both in OS as in the Companion Display
+###   "LLM": Activates submenu where context-aware AI powered words can be selected. the initial seed word(s) can be modified below.
+###   "Space": Option where the "Space" key is virtually pressed both in OS as in the Companion Display
+###   "Mouse": Activates submenu where mouse controls are enabled. The speed can be modified below.
+###   "ABC": Activates submenu where the alphabet can be selected.
+###   "Numbers": Activates submenu where numbers can be selected.
+###   "Special Chars": Activates submenu where special characters can be selected.
+###   "NVC": Activates submenu where desired non-verbal Communication options can be selected.
+
+labelsMainMenu=LLM,Quick,BackSpace,Space,Mouse,ABC,Numbers,Special Chars,NVC
+
 
 #------------------Custom Labels, other languages possible
 labelsABC=ABCDEFGHIJKLMNOPQRSTUVWXYZ            ###change to other languages character set if needed
@@ -52,7 +67,7 @@ showFPS=False                                   ###Can be true, useful to see ho
 #------------------UI Options
 showWritten=True                                ###Can also be False, will hide what has been written
 maxWhatsWrittenSize=30                          ###Max Size of feedback character length (what has been written)
-showWrittenMode=CloneAndFlipMirror              ###Options are: None, Single, Mirror, CloneAndMirror, and CloneAndFlipMirror
+showWrittenMode=Single              ###Options are: None, Single, Mirror, CloneAndMirror, and CloneAndFlipMirror
 
 #------------------LLM Config
 llmWaitTime=1
@@ -63,4 +78,4 @@ LlmKey=Put_key_here
 #-------512,126-----------Local LLM Options
 llmContextSize=128                              ###how many previous tokens will be considered in a local LLM. For performance, default value is 32
 llmBatchSize=32                                 ###How many tokens can be ran through on a batch. For performance, default value is 32
-llmWaitTime=0									###Average time per call to LLM service
+llmWaitTime=8									###Average time per call to LLM service
