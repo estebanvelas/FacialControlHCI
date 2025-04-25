@@ -1,6 +1,8 @@
 '''
 Copyright (C) [2025] [Esteban Velasquez Toro]
 
+    Estimated Cervical Rotation Point as An anchor (ECRP) GUI
+
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
@@ -81,8 +83,9 @@ selectionCurrentTime=0
 seedWord="Welcome "
 
 #ui variables
-greenFrameColor = (0, 255, 0)  # BGR
-redFrameColor = (0, 0, 255)  # BGR
+selectorFrameColor = (0, 255, 0)  # BGR
+variableFrameColor = (0, 0, 255)  # BGR
+ReferenceFrameColor = (255, 0, 0)  # BGR
 alpha = 0.3
 font=cv2.FONT_HERSHEY_SIMPLEX
 
@@ -463,11 +466,11 @@ def GetGUI(theUIFrame,radiusAsPercentX,radiusAsPercentY,totalN,centerFaceX,cente
             cv2.fillPoly(theUIFrame, [theContours[i]], [150, 150, 150])
     #cv2.circle(theUIFrame, (centerFaceX, centerFaceY), radiusAsPercent, blueFrameColor, -1)
     cv2.ellipse(theUIFrame, (centerFaceX, centerFaceY), (radiusAsPercentX, radiusAsPercentY), 0, 0, 360,
-                greenFrameColor, -1)
+                selectorFrameColor, -1)
     polyEllipse = cv2.ellipse2Poly((centerFaceX, centerFaceY), (radiusAsPercentX, radiusAsPercentY),
                                    0, 0, 360, 1)
     # set center of nose as a controller
-    cv2.circle(theUIFrame, nosePosition, int(radiusAsPercentX * 0.25), redFrameColor, -1)
+    cv2.circle(theUIFrame, nosePosition, int(radiusAsPercentX * 0.25), variableFrameColor, -1)
 
     return polyEllipse,theContours,centerContours
 
@@ -916,7 +919,7 @@ def DisplayMouseMenu(theLabelsList,theLabelsOptions,totalN,theTopFrame,centerOfC
         if i % 2 == 0:#If even, show options
             text_size,prettyPrintRects=prettyPrintInCamera(theTopFrame, theLabelsOptions[int(math.floor(i/2))], centerOfContours[i], color,thefontScale,thefontThickness,prettyPrintRects,centerOfFace,onCenter=True)
         else:
-            text_size,prettyPrintRects=prettyPrintInCamera(theTopFrame, theLabelsList[int(math.floor(i/2))], centerOfContours[i], redFrameColor,thefontScale,thefontThickness,prettyPrintRects,centerOfFace,onCenter=True)
+            text_size,prettyPrintRects=prettyPrintInCamera(theTopFrame, theLabelsList[int(math.floor(i/2))], centerOfContours[i], variableFrameColor, thefontScale, thefontThickness, prettyPrintRects, centerOfFace, onCenter=True)
 
 def DisplayCharactersMenu(theLabelsList, totalN, theTopFrame, theCurrentSelection,centerOfContours,color,thefontScale,thefontThickness,prettyPrintRects,centerOfFace):
     #lettersPerArea = len(theLabelsList) / (totalN - len(labelsLettersMenu))
@@ -926,7 +929,7 @@ def DisplayCharactersMenu(theLabelsList, totalN, theTopFrame, theCurrentSelectio
         if i < len(labelsLettersMenu):
             text_size,prettyPrintRects=prettyPrintInCamera(theTopFrame, labelsLettersMenu[i], centerOfContours[i], color,thefontScale,thefontThickness,prettyPrintRects,centerOfFace)
         else:
-            text_size,prettyPrintRects=prettyPrintInCamera(theTopFrame, theLabelsList[i-len(labelsLettersMenu)], centerOfContours[i], redFrameColor,thefontScale,thefontThickness,prettyPrintRects,centerOfFace)
+            text_size,prettyPrintRects=prettyPrintInCamera(theTopFrame, theLabelsList[i-len(labelsLettersMenu)], centerOfContours[i], variableFrameColor, thefontScale, thefontThickness, prettyPrintRects, centerOfFace)
 
 def DisplayOtherMenus(theLabelsList,theLabelsOptions, totalN, theTopFrame,centerOfContours,color,thefontScale,thefontThickness,prettyPrintRects,centerOfFace):
     for i in range(totalN):
@@ -935,7 +938,7 @@ def DisplayOtherMenus(theLabelsList,theLabelsOptions, totalN, theTopFrame,center
             text_size,prettyPrintRects=prettyPrintInCamera(theTopFrame, theLabelsOptions[i], centerOfContours[i], color,thefontScale,thefontThickness,prettyPrintRects,centerOfFace)
         else:
             if i< (len(theLabelsOptions)+len(theLabelsList)):
-                text_size,prettyPrintRects=prettyPrintInCamera(theTopFrame,  theLabelsList[i-len(theLabelsOptions)], centerOfContours[i], redFrameColor,thefontScale,thefontThickness,prettyPrintRects,centerOfFace)
+                text_size,prettyPrintRects=prettyPrintInCamera(theTopFrame, theLabelsList[i-len(theLabelsOptions)], centerOfContours[i], variableFrameColor, thefontScale, thefontThickness, prettyPrintRects, centerOfFace)
 
 
 def GetCharacterDivisionMenu(theLabelsList, totalN, theTopFrame, theCurrentSelection,centerOfContours,color,lettersColor,thefontScale,thefontThickness,prettyPrintRects,centerOfFace):
@@ -1294,8 +1297,8 @@ def mainLoop(queue):
         imgRGB = cv2.cvtColor(topFrame, cv2.COLOR_BGR2RGB)
         results = faceMesh.process(imgRGB)
         # font
-        nosePosition = (50, 50)
-        color = (255, 0, 0)# Blue color in BGR
+        selectorPosition = (50, 50)
+        color = ReferenceFrameColor#
         lettersColor=(50,50,255)
 
         if results.multi_face_landmarks:
@@ -1303,7 +1306,7 @@ def mainLoop(queue):
                 #mpDraw.draw_landmarks(topFrame,faceLandMarks,mpFaceMesh.FACEMESH_FACE_OVAL, drawSpecs,drawSpecs)
                 #get max size of face
                 shape = topFrame.shape
-                faceXmin,faceXmax,faceYmin,faceYmax,centerOfFaceX,centerOfFaceY=GetFaceSizeAndCenter(shape,faceLandMarks.landmark)
+                faceXmin,faceXmax,faceYmin,faceYmax,ecrpX,ecrpY=GetFaceSizeAndCenter(shape,faceLandMarks.landmark)
 
                 for idx, landMark in enumerate(faceLandMarks.landmark):
                     if idx>44 and idx<46:#nose points:44 and 45
@@ -1311,7 +1314,7 @@ def mainLoop(queue):
                         y = landMark.y
                         relative_x = int(x * shape[1])
                         relative_y = int(y * shape[0])
-                        nosePosition=(relative_x, relative_y)
+                        selectorPosition=(relative_x, relative_y)
 
                         #circle on center of face
                         sizeOfFace=math.sqrt(math.pow(shape[1]*(faceXmax-faceXmin),2)+math.pow(shape[0]*(faceYmax-faceYmin),2))
@@ -1320,46 +1323,46 @@ def mainLoop(queue):
                         offsetAsPixelsX=int((theoffsetX/2)/100*sizeOfFace)
                         offsetAsPixelsY = int((theoffsetY/2) / 100 * sizeOfFace)
                         #print(f"offsetAsPixels: ({offsetAsPixelsX},{offsetAsPixelsY})")
-                        centerOfFaceX = centerOfFaceX+offsetAsPixelsX
-                        centerOfFaceY = centerOfFaceY+offsetAsPixelsY
-                        centerOfFace=[centerOfFaceX,centerOfFaceY]
-                        #print(centerOfFaceX,centerOfFaceY, faceXmin,faceXmax,faceYmin,faceYmax)
+                        ecrpX = ecrpX+offsetAsPixelsX
+                        ecrpY = ecrpY+offsetAsPixelsY
+                        centerOfFace=[ecrpX,ecrpY]
+                        #print(ecrpX,ecrpY, faceXmin,faceXmax,faceYmin,faceYmax)
                         # cv2.putText(topFrame,str(idx), org, font,fontScale, color, thickness, cv2.LINE_AA)
 
                         # ---------GUI--------------
                         # create the n zones for buttons, geometry must be created by placing points in clockwise order
                         # -------------------------
-                        ellipsePoly,contours,centerOfContours=GetGUI(uiFrame,radiusAsPercentageX,radiusAsPercentageY,thetotalOptionsN,centerOfFaceX,centerOfFaceY,nosePosition,theignoreGuiAngles,theignoreAngleArc)
+                        ellipsePoly,contours,centerOfContours=GetGUI(uiFrame,radiusAsPercentageX,radiusAsPercentageY,thetotalOptionsN,ecrpX,ecrpY,selectorPosition,theignoreGuiAngles,theignoreAngleArc)
                         (thecurrentSelection,thecreatedLabelsList,theprevCreatedLabelsList,topFrame,thelastWord,
                          thelabelsLMM,thewhatsWritten,thestartTime,thellmIsWorkingFlag,prettyPrintRects,paginationIndex) = (
-                            GetMenuSystem (queue,topFrame,thetotalOptionsN,
-                                        thecurrentSelection,thecreatedLabelsList,theprevCreatedLabelsList,
-                                        centerOfContours,color,lettersColor,dimensionsTop,theshowFPS,thestartTime,
-                                        thelastWord,theprevLastWord,thellmIsWorkingFlag,
-                                        theLlmService, theLlmKey,
-                                        thellmWaitTime, font,
-                                        thefontScale,
-                                        thefontThickness,
-                                        redFrameColor,
-                                        thewhatsWritten,thefps,thelabelsLMM,thelastWord,
-                                        thelabelsQuick,
-                                        thelabelsABC,
-                                        thelabelsMainMenu,
-                                        thelabelsNumbers,
-                                        thelabelsSpecial,
-                                        themouseSpeed,theshowWritten,theshowWrittenMode,themaxWhatsWrittenSize,
-                                        thetotalOptionsN,paginationIndex,
-                                        thellmContextSize,
-                                        thellmBatchSize,prettyPrintRects,centerOfFace
-                                       ))
+                            GetMenuSystem (queue, topFrame, thetotalOptionsN,
+                                           thecurrentSelection, thecreatedLabelsList, theprevCreatedLabelsList,
+                                           centerOfContours, color, lettersColor, dimensionsTop, theshowFPS, thestartTime,
+                                           thelastWord, theprevLastWord, thellmIsWorkingFlag,
+                                           theLlmService, theLlmKey,
+                                           thellmWaitTime, font,
+                                           thefontScale,
+                                           thefontThickness,
+                                           variableFrameColor,
+                                           thewhatsWritten, thefps, thelabelsLMM, thelastWord,
+                                           thelabelsQuick,
+                                           thelabelsABC,
+                                           thelabelsMainMenu,
+                                           thelabelsNumbers,
+                                           thelabelsSpecial,
+                                           themouseSpeed, theshowWritten, theshowWrittenMode, themaxWhatsWrittenSize,
+                                           thetotalOptionsN, paginationIndex,
+                                           thellmContextSize,
+                                           thellmBatchSize, prettyPrintRects, centerOfFace
+                                           ))
 
                         # -------------------------
                         # Selection Logic----------
                         # -------------------------
                         theselected,theprevSelected,thecurrentSelection,theselectionCurrentTime,flagSameSelection,prettyPrintRects = GetSelectionLogic(
                             topFrame,dimensionsTop,theselectionCurrentTime,theselectionType,
-                            thecurrentSelection,theselected,theprevSelected,ellipsePoly,nosePosition,contours,
-                            thetimeOnLocation,redFrameColor,thefontScale,thefontThickness,thefps,flagSameSelection,
+                            thecurrentSelection,theselected,theprevSelected,ellipsePoly,selectorPosition,contours,
+                            thetimeOnLocation,variableFrameColor,thefontScale,thefontThickness,thefps,flagSameSelection,
                             thewhatsWritten,theselectionWaitTime,prettyPrintRects,centerOfFace)
 
                         if thelastWord != theprevLastWord:
