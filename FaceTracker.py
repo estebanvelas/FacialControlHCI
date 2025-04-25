@@ -318,43 +318,68 @@ def GetConfigSettings():
             fontScale,fontThickness,camSizeX,camSizeY, showFPS, showWritten,llmContextSize,llmBatchSize,llmWaitTime,
             maxWhatsWrittenSize,showWrittenMode,seedWord,LlmService,LlmKey)
 
-def GetAreaPoints(totalN, centerOfFaceX, centerOfFaceY, areaSize, theignoreGuiAngles, theignoreAngleArc, offsetAngleDeg=-15):
-    # Ensure theignoreGuiAngles is a list
+def GetAreaPoints(totalN, centerOfFaceX, centerOfFaceY, areaSize, theignoreGuiAngles, theignoreAngleArc, offsetAngleDeg=0):
+    # Ensure input is list
     if not isinstance(theignoreGuiAngles, list):
         theignoreGuiAngles = [theignoreGuiAngles]
 
+    adjusted_ignore_angles = [(float(angle) - offsetAngleDeg) % 360 for angle in theignoreGuiAngles]
+
+    # Step 1: Build ignore arcs and normalize with adjusted angles
     ignore_arcs = []
-    for angle in theignoreGuiAngles:
-        center = float(angle) % 360
+    for angle in adjusted_ignore_angles:
+        center = angle % 360
         half_arc = theignoreAngleArc / 2
-        start = center - half_arc
-        end = center + half_arc
+        start = (center - half_arc) % 360
+        end = (center + half_arc) % 360
         ignore_arcs.append((start, end))
 
-    ignore_arcs.sort()
+    # Normalize to 0–360 with wraparound handling
+    normalized_arcs = []
+    for start, end in ignore_arcs:
+        start %= 360
+        end %= 360
+        if start < end:
+            normalized_arcs.append((start, end))
+        else:
+            # handle wrap-around
+            normalized_arcs.append((start, 360))
+            normalized_arcs.append((0, end))
+
+    # Sort and merge overlapping arcs
+    normalized_arcs.sort()
+    merged_arcs = []
+    for arc in normalized_arcs:
+        if not merged_arcs:
+            merged_arcs.append(arc)
+        else:
+            last_start, last_end = merged_arcs[-1]
+            current_start, current_end = arc
+            if current_start <= last_end:
+                merged_arcs[-1] = (last_start, max(last_end, current_end))
+            else:
+                merged_arcs.append(arc)
+
+    # Step 2: Get available arcs
     available_arcs = []
     last_end = 0
-
-    for arc_start, arc_end in ignore_arcs:
+    for arc_start, arc_end in merged_arcs:
         if arc_start > last_end:
             available_arcs.append((last_end, arc_start))
         last_end = arc_end
-
     if last_end < 360:
-        if ignore_arcs[0][0] < 0:
-            available_arcs.append((last_end, 360 + ignore_arcs[0][0]))
-        else:
-            available_arcs.append((last_end, 360))
+        available_arcs.append((last_end, 360))
 
-    available_degrees = 360 - (len(theignoreGuiAngles) * theignoreAngleArc)
-    degrees_per_segment = available_degrees / totalN
+    # Step 3: Place segments along available arcs (remaining code remains the same)
+    total_available_degrees = sum(end - start for start, end in available_arcs)
+    degrees_per_segment = total_available_degrees / totalN
 
     contours = []
     centerOfContours = []
-    rotationAngle = available_degrees / (totalN * 2)
+    rotationAngle = total_available_degrees / (totalN * 2)
     segments_drawn = 0
 
-    def rotate(x, y, angle_deg):
+    def rotateSelectionSlot(x, y, angle_deg):
         angle_rad = math.radians(angle_deg)
         dx = x - centerOfFaceX
         dy = y - centerOfFaceY
@@ -362,6 +387,7 @@ def GetAreaPoints(totalN, centerOfFaceX, centerOfFaceY, areaSize, theignoreGuiAn
         ry = dx * math.sin(angle_rad) + dy * math.cos(angle_rad) + centerOfFaceY
         return rx, ry
 
+    print(f"available_arcs: {available_arcs}")
     for arc_start, arc_end in available_arcs:
         arc_length = arc_end - arc_start
         num_segments = int(round(arc_length / degrees_per_segment))
@@ -370,8 +396,8 @@ def GetAreaPoints(totalN, centerOfFaceX, centerOfFaceY, areaSize, theignoreGuiAn
             if segments_drawn >= totalN:
                 break
 
-            angle1_deg = (arc_start + j * degrees_per_segment + offsetAngleDeg) #% 360
-            angle2_deg = (arc_start + (j + 1) * degrees_per_segment + offsetAngleDeg) #% 360
+            angle1_deg = (arc_start + j * degrees_per_segment)
+            angle2_deg = (arc_start + (j + 1) * degrees_per_segment)
 
             angle1_rad = math.radians(angle1_deg)
             angle2_rad = math.radians(angle2_deg)
@@ -381,8 +407,8 @@ def GetAreaPoints(totalN, centerOfFaceX, centerOfFaceY, areaSize, theignoreGuiAn
             x2 = centerOfFaceX + math.cos(angle2_rad) * areaSize
             y2 = centerOfFaceY + math.sin(angle2_rad) * areaSize
 
-            rotatedX1, rotatedY1 = rotate(x1, y1, rotationAngle)
-            rotatedX2, rotatedY2 = rotate(x2, y2, rotationAngle)
+            rotatedX1, rotatedY1 = rotateSelectionSlot(x1, y1, offsetAngleDeg)
+            rotatedX2, rotatedY2 = rotateSelectionSlot(x2, y2, offsetAngleDeg)
 
             points = [[centerOfFaceX, centerOfFaceY], [rotatedX1, rotatedY1], [rotatedX2, rotatedY2]]
             ctr = np.array(points).reshape((-1, 1, 2)).astype(np.int32)
@@ -392,7 +418,7 @@ def GetAreaPoints(totalN, centerOfFaceX, centerOfFaceY, areaSize, theignoreGuiAn
             centerAngleRad = math.radians(centerAngleDeg)
             cx = centerOfFaceX + math.cos(centerAngleRad) * areaSize
             cy = centerOfFaceY + math.sin(centerAngleRad) * areaSize
-            rcx, rcy = rotate(cx, cy, rotationAngle)
+            rcx, rcy = rotateSelectionSlot(cx, cy, offsetAngleDeg)
 
             centerOfContours.append((int(rcx), int(rcy)))
 
@@ -1065,8 +1091,12 @@ def GetMainMenu(totalN,theTopFrame,theCurrentSelection,centerOfContours,color,le
         while len(labelsMainMenu) < totalN:
             labelsMainMenu[-1]=""
             labelsMainMenu.append("More Options")
+            # print(f"paginationIndex: {paginationIndex}, startIndex: {startIndex}, endIndex: {endIndex},totalN: {totalN}, labelsMainMenu: {labelsMainMenu} ")
+    else:
+        labelsMainMenu=originalLabelsMainMenu
+        while len(labelsMainMenu) < totalN:
+            labelsMainMenu[-1] = ""
 
-        #print(f"paginationIndex: {paginationIndex}, startIndex: {startIndex}, endIndex: {endIndex},totalN: {totalN}, labelsMainMenu: {labelsMainMenu} ")
 
     for i in range(totalN):
         # set option labels on topFrame to make them not transparent
