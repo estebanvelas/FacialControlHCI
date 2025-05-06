@@ -561,6 +561,42 @@ def determineMaxWrittenSize(thescreenWidth, thewhatsWritten,thefont,thefontScale
     #print(f"max chars: {max_chars}, len(whatsWritten): {len(thewhatsWritten)}, whats written: \"{thewhatsWritten}\"")
     return (text_width, text_height), baseline,themaxWhatsWrittenSize,thewhatsWritten,oneCharTextWidthPxls
 
+from typing import List, Tuple
+def replace_and_track_indices(original: str,pattern: str,replacement: str,flags=0
+) -> Tuple[str, List[Tuple[int, int, str]]]:#type hint
+    """
+    Replaces all matches of `pattern` in `original` with `replacement`,
+    and returns the new string along with the indices and matched strings
+    of the replacements in the new string.
+
+    Args:
+        original (str): The input string.
+        pattern (str): Regex pattern to find.
+        replacement (str): Replacement string.
+        flags (int): Regex flags (e.g., re.IGNORECASE).
+
+    Returns:
+        Tuple[str, List[Tuple[int, int, str]]]:
+            - Modified string
+            - List of (start_index, end_index, original_match) in the new string
+    """
+    matches = list(re.finditer(pattern, original, flags=flags))
+    result: List[Tuple[int, int, str]] = []
+    new_string = ''
+    last_end = 0
+
+    for match in matches:
+        start, end = match.span()
+        matched_text = match.group()
+        new_string += original[last_end:start] + replacement
+        replace_start = len(new_string) - len(replacement)
+        replace_end = len(new_string)
+        result.append((replace_start, replace_end, matched_text))
+        last_end = end
+
+    new_string += original[last_end:]
+    return new_string, result
+
 
 def showWhatsWritten(theTopFrame,dimensionsTop,thewhatsWritten, thefont,thefontScale,thefontThickness,theshowWrittenMode,themaxWhatsWrittenSize):
     #start options
@@ -623,7 +659,7 @@ def showWhatsWritten(theTopFrame,dimensionsTop,thewhatsWritten, thefont,thefontS
         pixelsPerImage=math.ceil(100/oneCharTextWidthPxls)+20#get image size. 100 pixels per image for now
         charsPerImage=math.ceil(pixelsPerImage/oneCharTextWidthPxls)
 
-        spaceOfImage=" "*(charsPerImage)
+        spaceOfImage=" "*(charsPerImage+2)
         #print( f"oneCharTextWidthPxls, pixPerImage, charsPerImage, len(spaceOfImage): ({oneCharTextWidthPxls}, {pixelsPerImage}, {charsPerImage}, {len(spaceOfImage)})")
         (text_width, text_height), baseline, themaxWhatsWrittenSize, thewhatsWritten, oneCharTextWidthPxls = determineMaxWrittenSize(
             topHalfSize[1], thewhatsWritten, thefont, thefontScale, thefontThickness, themaxWhatsWrittenSize)
@@ -631,10 +667,9 @@ def showWhatsWritten(theTopFrame,dimensionsTop,thewhatsWritten, thefont,thefontS
 
         modifiedToWrite = thewhatsWritten
 
-        matches = list(re.finditer(r'\S*\.(jpg|jpeg|png)', modifiedToWrite, flags=re.IGNORECASE))
-        modifiedToWrite = re.sub(r'\S*\.(jpg|jpeg|png)', spaceOfImage, modifiedToWrite, flags=re.IGNORECASE)
-        (text_width,
-         text_height), baseline, themaxWhatsWrittenSize, modifiedToWrite, oneCharTextWidthPxls = determineMaxWrittenSize(
+        #matches = list(re.finditer(r'\S*\.(jpg|jpeg|png)', modifiedToWrite, flags=re.IGNORECASE))
+        modifiedToWrite, replacement_info = replace_and_track_indices(modifiedToWrite, r'\S*\.(jpg|jpeg|png)', spaceOfImage, flags=re.IGNORECASE)
+        (text_width,text_height), baseline, themaxWhatsWrittenSize, modifiedToWrite, oneCharTextWidthPxls = determineMaxWrittenSize(
             topHalfSize[1], modifiedToWrite, thefont, thefontScale, thefontThickness, themaxWhatsWrittenSize)
         textX = int((topHalfSize[1] / 2) - (text_width / 2))
         textY = int(text_height + 20)
@@ -645,27 +680,28 @@ def showWhatsWritten(theTopFrame,dimensionsTop,thewhatsWritten, thefont,thefontS
                     thefontScale, (255, 255, 255), thefontThickness, cv2.LINE_AA)
 
         # put image
-        matches_counted=0
         sumPrevSizes=0
-        for match in matches:
-            matched_text = match.group()
-            startIndex = match.start()
-            endIndex = match.end()
+        for matchesCounted, match in enumerate(replacement_info):
+            matched_text = match[2]
+            startIndex = match[0]+1
+            endIndex = match[1]
             image_key = matched_text  # example:'Expressive/Surprised.png'
             image_key = image_key.lstrip("./")
             if image_key in imageCache:
                 overlay_img = imageCache[image_key]
                 if overlay_img is not None:
-                    imageX = math.floor((textX + ((startIndex-sumPrevSizes) * oneCharTextWidthPxls)))
+                    substring = matched_text[:startIndex]
+                    (substring_size, _) = cv2.getTextSize(substring, font, thefontScale, thefontThickness)
+                    imageX = math.floor((textX + substring_size[0]))
                     imageY = int(topHalfSize[2]/2)
                     top_half = overlay_image(top_half, overlay_img, x=imageX,
                                                 y=imageY)
                     sumPrevSizes = endIndex#sumPrevSizes + (endIndex - startIndex)
-                    print(f"Match:{matches_counted}, key: {image_key}, (x,y)=({imageX}, {imageY}), startIndex: {startIndex}, endIndex:{endIndex}, sumPrevSizes:{sumPrevSizes}")
+                    #print(f"Match:{matches_counted}, key: {image_key}, (x,y)=({imageX}, {imageY}), startIndex: {startIndex}, endIndex:{endIndex}, sumPrevSizes:{sumPrevSizes}")
                     #print(f"Match:{matches_counted}, key: {image_key}, (x,y)=({imageX}, {imageY})")
             else:#part of a key, or something else is happening
-                thewhatsWritten.replace(image_key,"")
-            matches_counted+=1
+                theReplacedSpaces=" "*(len(image_key))
+                thewhatsWritten.replace(image_key,theReplacedSpaces)#""
 
 
 
