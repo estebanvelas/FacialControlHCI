@@ -87,6 +87,7 @@ selectorFrameColor = (0, 255, 0)  # BGR
 ReferenceFrameColor = (255, 0, 0)  # BGR
 variableSelectionSlotColor = (0, 0, 255)  # BGR
 systemSelectionSlotColor = (0, 0, 255)  # BGR
+highlightSlotColor=(100,100,255)#BGR
 
 alpha = 0.3
 font=cv2.FONT_HERSHEY_SIMPLEX
@@ -376,7 +377,11 @@ def GetAreaPoints(totalN, centerOfFaceX, centerOfFaceY, areaSize, theignoreGuiAn
         available_arcs.append((last_end, 360))
 
     # Step 3: Place segments along available arcs (remaining code remains the same)
-    total_available_degrees = sum(end - start for start, end in available_arcs)
+    #total_available_degrees = sum(end - start for start, end in available_arcs)
+    total_available_degrees=0
+    for arc in available_arcs:
+        total_available_degrees=total_available_degrees + (arc[1]-arc[0])
+    print(f"total available Degrees: {total_available_degrees}")
     degrees_per_segment = total_available_degrees / totalN
 
     contours = []
@@ -469,12 +474,24 @@ def read_NVC_structure(root_dir):
 
     return folder_structure
 
+def is_point_inside_ellipse(point, center, radius_x, radius_y):
+    x, y = point
+    cx, cy = center
+    dx = (x - cx) / radius_x
+    dy = (y - cy) / radius_y
+    return dx**2 + dy**2 < 1
+
 def GetGUI(theUIFrame,radiusAsPercentX,radiusAsPercentY,totalN,centerFaceX,centerFaceY,nosePosition,theignoreGuiAngles,theignoreAngleArc):
     theContours, centerContours = GetAreaPoints(totalN, centerFaceX, centerFaceY,100,theignoreGuiAngles,theignoreAngleArc)  # area number, total areas
     # set center of face
+
     for i in range(totalN):
         #for color purposes
-        if i %2 ==0:
+        ECRP_radius= abs(nosePosition[0]-centerFaceX)
+        if (cv2.pointPolygonTest(theContours[i], nosePosition, False)>=0) \
+                and not is_point_inside_ellipse(nosePosition,[centerFaceX,centerFaceY],radiusAsPercentX,radiusAsPercentY):
+            cv2.fillPoly(theUIFrame, [theContours[i]], highlightSlotColor)
+        elif i %2 ==0:
             cv2.fillPoly(theUIFrame, [theContours[i]], [250, 250, 250])
         else:
             cv2.fillPoly(theUIFrame, [theContours[i]], [150, 150, 150])
