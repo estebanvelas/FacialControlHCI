@@ -222,6 +222,13 @@ def GetConfigSettings():
     seedWord="Emotions"
     LlmService="local"
     LlmKey=""
+    global selectorFrameColor,ReferenceFrameColor,variableSelectionSlotColor,systemSelectionSlotColor,highlightSlotColor
+    selectorFrameColor = (0, 255, 0)  # BGR
+    ReferenceFrameColor = (255, 0, 0)  # BGR
+    variableSelectionSlotColor = (0, 0, 255)  # BGR
+    systemSelectionSlotColor = (0, 0, 255)  # BGR
+    highlightSlotColor = (100, 100, 255)  # BGR
+
 
     with open(configFilePath, 'r') as file:
         for line in file:
@@ -232,7 +239,23 @@ def GetConfigSettings():
 
             key, value = line.strip().split('=',1)
             value = value.split('###', 1)[0].strip()
-            if key == "selectionType":
+
+            if key == "selectorFrameColor":#BGR
+                RGB =value.split(',')
+                selectorFrameColor = (int(RGB[2]),int(RGB[1]), int(RGB[0]))  # BGR
+            elif key == "ReferenceFrameColor":
+                RGB = value.split(',')
+                ReferenceFrameColor = (int(RGB[2]),int(RGB[1]), int(RGB[0]))  # BGR
+            elif key == "variableSelectionSlotColor":
+                RGB = value.split(',')
+                variableSelectionSlotColor = (int(RGB[2]),int(RGB[1]), int(RGB[0]))  # BGR
+            elif key == "systemSelectionSlotColor":
+                RGB = value.split(',')
+                systemSelectionSlotColor = (int(RGB[2]),int(RGB[1]), int(RGB[0]))  # BGR
+            elif key == "highlightSlotColor":
+                RGB = value.split(',')
+                highlightSlotColor = (int(RGB[2]),int(RGB[1]), int(RGB[0]))  # BGR
+            elif key == "selectionType":
                 selectionType = value
             elif key == "ignoreGuiAngles":
                 ignoreGuiAngles = value.split(',')
@@ -304,9 +327,11 @@ def GetConfigSettings():
                 LlmKey = value
 
 
+
     # Print the variables
     print(f"selectionType: {selectionType} \n"
           f", timeOnLocation: {timeOnLocation} \n"
+          f", Colors: ({selectorFrameColor}), ({ReferenceFrameColor}),({variableSelectionSlotColor}),({systemSelectionSlotColor}),({highlightSlotColor}) \n"
           f", ignoreGuiAngles,ignoreAngleArc: ({ignoreGuiAngles}),{ignoreAngleArc}"
           f", ttsRate,ttsVolume,ttsVoiceType: ({ttsRate},{ttsVolume},{ttsVoiceType})"
           f", offsetPercentage: ({offsetPercentageX},{offsetPercentageY}),\n"
@@ -322,7 +347,8 @@ def GetConfigSettings():
             centerSizePercentageX,centerSizePercentageY,offsetPercentageX,offsetPercentageY,
             totalOptionsN,mouseSpeed,selectionWaitTime,labelsMainMenu,labelsABC,labelsNumbers,labelsSpecial,labelsQuick,
             fontScale,fontThickness,camSizeX,camSizeY, showFPS, showWritten,llmContextSize,llmBatchSize,llmWaitTime,
-            maxWhatsWrittenSize,showWrittenMode,seedWord,LlmService,LlmKey)
+            maxWhatsWrittenSize,showWrittenMode,seedWord,LlmService,LlmKey,
+            selectorFrameColor,ReferenceFrameColor,variableSelectionSlotColor,systemSelectionSlotColor,highlightSlotColor)
 
 def GetAreaPoints(totalN, centerOfFaceX, centerOfFaceY, areaSize, theignoreGuiAngles, theignoreAngleArc, offsetAngleDeg=0):
     # Ensure input is list
@@ -381,7 +407,7 @@ def GetAreaPoints(totalN, centerOfFaceX, centerOfFaceY, areaSize, theignoreGuiAn
     total_available_degrees=0
     for arc in available_arcs:
         total_available_degrees=total_available_degrees + (arc[1]-arc[0])
-    print(f"total available Degrees: {total_available_degrees}")
+    #print(f"total available Degrees: {total_available_degrees}")
     degrees_per_segment = total_available_degrees / totalN
 
     contours = []
@@ -1616,7 +1642,8 @@ def mainLoop(queue):
      thecamSizeX,thecamSizeY,theshowFPS,theshowWritten,
      thellmContextSize,thellmBatchSize,thellmWaitTime,
      themaxWhatsWrittenSize,theshowWrittenMode,theseedWord,
-     theLlmService,theLlmKey)=GetConfigSettings()
+     theLlmService,theLlmKey,
+     selectorFrameColor,ReferenceFrameColor,variableSelectionSlotColor,systemSelectionSlotColor,highlightSlotColor)=GetConfigSettings()
 
     #thellm=loadLLM("zephyr-7b-beta.Q4_K_M.gguf",llmContextSize,llmBatchSize)
     mpDraw = mp.solutions.drawing_utils
