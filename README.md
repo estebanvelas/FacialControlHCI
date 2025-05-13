@@ -1,5 +1,5 @@
 # **FacialControlHCI**  
-A facial gesture-based control system for Human-Computer Interaction (HCI).  
+A facial gesture-based control system for Human-Computer Interaction (HCI) using the Estimated Cervical Rotation point as an Anchor.  
 
 ## **Overview**  
 **FacialControlHCI** is an open-source project that enables users to interact with computers using facial expressions. It leverages **computer vision** and **machine learning** to recognize facial gestures and map them to system controls.  
