@@ -1001,14 +1001,21 @@ def GetMenuSystem(queue, theTopFrame, totalN, theCurrentSelection,theprevSelecti
                 #print(f"label list 1: {theCreatedLabelList}")
                 if theCurrentSelection[1]== -1:
                     return theCurrentSelection,theCreatedLabelList, theTopFrame,thelastWord,thelabelsLMM,thewhatsWritten
-                elif (theCreatedLabelList[0]=="" and theCurrentSelection[1]=="MultipleLetters"):
+
+                if (theCurrentSelection[1]=="MultipleLetters"):
+                    theOriginalCreatedLabelList=thelabelsABC
+                elif (theCurrentSelection[1]=="MultipleNumbers"):
+                    theOriginalCreatedLabelList=thelabelsNumbers
+                elif (theCurrentSelection[1]=="MultipleSpecialChars"):
+                    theOriginalCreatedLabelList=thelabelsSpecial
+
+                if (theCreatedLabelList[0]=="" and theCurrentSelection[1]=="MultipleLetters"):
                     theCreatedLabelList=thelabelsABC
                 elif (theCreatedLabelList[0]=="" and theCurrentSelection[1]=="MultipleNumbers"):
                     theCreatedLabelList=thelabelsNumbers
                 elif (theCreatedLabelList[0]=="" and theCurrentSelection[1]=="MultipleSpecialChars"):
                     theCreatedLabelList=thelabelsSpecial
 
-                theOriginalCreatedLabelList=theCreatedLabelList
                 if theCurrentSelection[0]>=len(labelsLettersMenu):#in variable menu
                     sizeOfLabelText = len(theCreatedLabelList[theCurrentSelection[0] - len(labelsLettersMenu)])
                     if (sizeOfLabelText == 1):
@@ -1046,10 +1053,13 @@ def GetMenuSystem(queue, theTopFrame, totalN, theCurrentSelection,theprevSelecti
                     if labelsLettersMenu[theCurrentSelection[0]]=="Back":#["Back", "BackSpace", "Main Menu"]
                         #theCurrentSelection = [-1, "Back"]
                         if theprevCreatedLabelsList:
-                            if len(theprevCreatedLabelsList) >= 2:
-                                theCreatedLabelList=theprevCreatedLabelsList.pop()
+                            print(f"len(theprevCreatedLabelsList[0]): {len(theprevCreatedLabelsList[0])}")
+                            #if len(theprevCreatedLabelsList[0][0])>=math.ceil(len(theOriginalCreatedLabelList)/(totalN-len(labelsLettersMenu))) :
+                            if len(theprevCreatedLabelsList) >= 1:  # levels deep
+                                theCreatedLabelList = theprevCreatedLabelsList.pop()
                                 theCreatedLabelList = ''.join(filter(None, theCreatedLabelList))
-                            if len(theprevCreatedLabelsList[0]>12):#if pressed back in last menu
+                            # if pressed back in last menu, where characters per selection slot is larger than alphabet/selectionslots
+                            elif len(theprevCreatedLabelsList[-1][0]) == math.ceil(len(theOriginalCreatedLabelList)/(totalN-len(labelsLettersMenu))) :
                                 theprevCreatedLabelsList.clear()
                                 theCurrentSelection = [-1, "MainMenu"]
                             else:
@@ -1063,6 +1073,9 @@ def GetMenuSystem(queue, theTopFrame, totalN, theCurrentSelection,theprevSelecti
                                 theCreatedLabelList, totalN, theTopFrame, theCurrentSelection, centerOfContours, systemSelectorColor,
                                 variableSelectionSlotColor, thefontScale, thefontThickness,prettyPrintRects,centerOfFace)
                             theCurrentSelection[0] = -1
+                        else:
+                            theprevCreatedLabelsList.clear()
+                            theCurrentSelection = [-1, "MainMenu"]
                         #print("menu: "+str(labelsMainMenu[theCurrentSelection[0]]))
                     elif labelsLettersMenu[theCurrentSelection[0]] == "BackSpace":#BackSpace
                         theCurrentSelection[0] = -1
@@ -1180,7 +1193,8 @@ def DisplayCharactersMenu(theLabelsList, totalN, theTopFrame, theCurrentSelectio
     lettersPerArea = math.ceil(len(theLabelsList) / (totalN - len(labelsLettersMenu)))
     for i in range(0,totalN):
         # set option labels on topFrame to make them not transparent
-        if i <= len(labelsLettersMenu):
+        if i < len(labelsLettersMenu):
+            print(f"labelsLettersMenu: {labelsLettersMenu}")
             topFrame,text_size,prettyPrintRects=prettyPrintInCamera(theTopFrame, labelsLettersMenu[i], centerOfContours[i], color,thefontScale,thefontThickness,prettyPrintRects,centerOfFace)
         else:
             topFrame,text_size,prettyPrintRects=prettyPrintInCamera(theTopFrame, theLabelsList[i-len(labelsLettersMenu)], centerOfContours[i], variableSelectionSlotColor, thefontScale, thefontThickness, prettyPrintRects, centerOfFace)

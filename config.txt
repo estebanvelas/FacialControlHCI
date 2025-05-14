@@ -23,7 +23,7 @@ centerSizePercentageX=25                        ###Percentage of face x
 centerSizePercentageY=25                        ###Percentage of face y
 offsetPercentageX=0                             ###Percentage of face x
 offsetPercentageY=10                            ###Percentage of face y
-totalOptionsN=4                                 ###how many split areas will appear in program. Default value of 8. Cannot be less than 3.
+totalOptionsN=5                                 ###how many split areas will appear in program. Default value of 8. Cannot be less than 3.
 mouseSpeed=5                                    ###How fast the mouse will move. Default value of 5
 selectionWaitTime=0.4                           ###How fast can options be selected, Default value of 0.4
 
@@ -46,8 +46,8 @@ highlightSlotColor= 150,150,0                  ### RGB format for the highlight 
 ###   "Special Chars": Activates submenu where special characters can be selected.
 ###   "NVC": Activates submenu where desired non-verbal Communication options can be selected.
 
-###labelsMainMenu=LLM,Quick,BackSpace,Space,Mouse,ABC,Numbers,Special Chars,NVC
-labelsMainMenu=NVC
+labelsMainMenu=LLM,Quick,BackSpace,Space,Mouse,ABC,Numbers,Special Chars,NVC
+###labelsMainMenu=NVC
 
 
 #------------------Custom Labels, other languages possible
