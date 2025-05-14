@@ -88,7 +88,7 @@ ReferenceFrameColor = (255, 0, 0)  # BGR
 variableSelectionSlotColor = (0, 0, 255)  # BGR
 systemSelectionSlotColor = (0, 0, 255)  # BGR
 highlightSlotColor=(100,100,255)#BGR
-
+originalLlmWaitTime=0;
 alpha = 0.3
 font=cv2.FONT_HERSHEY_SIMPLEX
 
@@ -220,8 +220,9 @@ def GetConfigSettings():
     maxWhatsWrittenSize=20
     showWrittenMode="Single"
     seedWord="Emotions"
-    LlmService="local"
+    LlmService="none"
     LlmKey=""
+    global originalLlmWaitTime
     global selectorFrameColor,ReferenceFrameColor,variableSelectionSlotColor,systemSelectionSlotColor,highlightSlotColor
     selectorFrameColor = (0, 255, 0)  # BGR
     ReferenceFrameColor = (255, 0, 0)  # BGR
@@ -315,6 +316,7 @@ def GetConfigSettings():
                 llmBatchSize = int(value)
             elif key == "llmWaitTime":
                 llmWaitTime = int(value)
+                originalLlmWaitTime=llmWaitTime
             elif key == "maxWhatsWrittenSize":
                 maxWhatsWrittenSize = int(value)
             elif key == "showWrittenMode":
@@ -326,7 +328,7 @@ def GetConfigSettings():
             elif key == "LlmKey":
                 LlmKey = value
 
-
+    #logic to remove LLM if menu not selected
 
     # Print the variables
     print(f"selectionType: {selectionType} \n"
@@ -513,14 +515,15 @@ def GetGUI(theUIFrame,radiusAsPercentX,radiusAsPercentY,totalN,centerFaceX,cente
 
     for i in range(totalN):
         #for color purposes
-        ECRP_radius= abs(nosePosition[0]-centerFaceX)
         if (cv2.pointPolygonTest(theContours[i], nosePosition, False)>=0) \
                 and not is_point_inside_ellipse(nosePosition,[centerFaceX,centerFaceY],radiusAsPercentX,radiusAsPercentY):
             cv2.fillPoly(theUIFrame, [theContours[i]], highlightSlotColor)
-        elif i %2 ==0:
+        elif i %3 ==0:
             cv2.fillPoly(theUIFrame, [theContours[i]], [250, 250, 250])
-        else:
+        elif i %3 ==1:
             cv2.fillPoly(theUIFrame, [theContours[i]], [150, 150, 150])
+        else:
+            cv2.fillPoly(theUIFrame, [theContours[i]], [50, 50, 50])
     #cv2.circle(theUIFrame, (centerFaceX, centerFaceY), radiusAsPercent, blueFrameColor, -1)
     cv2.ellipse(theUIFrame, (centerFaceX, centerFaceY), (radiusAsPercentX, radiusAsPercentY), 0, 0, 360,
                 selectorFrameColor, -1)
@@ -1129,36 +1132,37 @@ def GetMenuSystem(queue, theTopFrame, totalN, theCurrentSelection,theprevSelecti
     # LLM System--------------
     # --------------------------
     #print(f'logic 1 thelastWord != theprevLastWord: {thelastWord}, {theprevLastWord}')
-    if thelastWord != theprevLastWord:
-        if queue.empty() and not thellmIsWorkingFlag:  # Check if we need to call the slow method
-            thestartTime = time.time()
-            llmCall = multiprocessing.Process(target=getLLM, args=(
-            queue, theLlmService, theLlmKey, thelastWord, theSeedWord, thetotalOptionsN, thellmContextSize,
-            thellmBatchSize))
-            llmCall.start()
-            thellmIsWorkingFlag = True
-        else:
-            if thellmWaitTime <= 0:
-                theText = f"LLM has been called with \"{thelastWord}\", Calculating Timeframe for future calls"
+    if theLlmService != "None":
+        if thelastWord != theprevLastWord:
+            if queue.empty() and not thellmIsWorkingFlag:  # Check if we need to call the slow method
+                thestartTime = time.time()
+                llmCall = multiprocessing.Process(target=getLLM, args=(
+                queue, theLlmService, theLlmKey, thelastWord, theSeedWord, thetotalOptionsN, thellmContextSize,
+                thellmBatchSize))
+                llmCall.start()
+                thellmIsWorkingFlag = True
             else:
-                theText = f"LLM has been called with \"{thelastWord}\", aprox time: {totalTime} seconds out of {thellmWaitTime}"
-            thelabelsLMM = ["", "", "", "", ""]
-            topFrame,text_size,prettyPrintRects=prettyPrintInCamera(theTopFrame, theText, (int(dimensionsTop[1] / 2), int(dimensionsTop[0])), systemSelectorColor,
-                                                           thefontScale, thefontThickness, prettyPrintRects, centerOfFace, onCenter=True)
+                if thellmWaitTime <= 0:
+                    theText = f"LLM has been called with \"{thelastWord}\", Calculating Timeframe for future calls"
+                else:
+                    theText = f"LLM has been called with \"{thelastWord}\", aprox time: {totalTime} seconds out of {thellmWaitTime}"
+                thelabelsLMM = ["", "", "", "", ""]
+                topFrame,text_size,prettyPrintRects=prettyPrintInCamera(theTopFrame, theText, (int(dimensionsTop[1] / 2), int(dimensionsTop[0])), systemSelectorColor,
+                                                               thefontScale, thefontThickness, prettyPrintRects, centerOfFace, onCenter=True)
 
-    if not queue.empty():
-        thellmIsWorkingFlag = False
-        result = queue.get()
-        print(f"Prompt: {thelastWord}")
-        print(f"result: {result}")
-        if totalTime > thellmWaitTime:
-            thellmWaitTime = totalTime
-            changeLlmWaitTime(totalTime)
-        print(f"LLM Call took: {totalTime} seconds")
-        thelabelsLMM = result
+        if not queue.empty():
+            thellmIsWorkingFlag = False
+            result = queue.get()
+            print(f"Prompt: {thelastWord}")
+            print(f"result: {result}")
+            if totalTime > thellmWaitTime:
+                thellmWaitTime = totalTime
+                changeLlmWaitTime(thellmWaitTime)
+            print(f"LLM Call took: {totalTime} seconds")
+            thelabelsLMM = result
 
     return (theCurrentSelection,theprevSelection,theCreatedLabelList,theOriginalCreatedLabelList,theprevCreatedLabelsList, theTopFrame,thelastWord,thelabelsLMM,
-            thewhatsWritten,thestartTime,thellmIsWorkingFlag,prettyPrintRects,paginationIndex,currentNVCPath,flagSameSelection)
+            thewhatsWritten,thestartTime,thellmIsWorkingFlag,prettyPrintRects,paginationIndex,currentNVCPath,flagSameSelection,thellmWaitTime)
 
 def DisplayMouseMenu(theLabelsList,theLabelsOptions,totalN,theTopFrame,centerOfContours,colorSystem,thefontScale,thefontThickness,prettyPrintRects,centerOfFace,paginationIndex):
     orderedList = theLabelsOptions + theLabelsList
@@ -1385,15 +1389,15 @@ def prettyPrintInCamera(topFrame, text, theOrg, theColor, thefontScale,thefontTh
         #cv2.putText(topFrame, text, theOrg, font, thefontScale, theColor, thefontThickness,lineType)
     return topFrame,text_size,theprettyPrintRects
 
-def paginationSystem(totalN, originalLabelsMenu, paginationIndex):
+def paginationSystem(totalN, originalLabelsMenu, paginationIndex,currentSelection="notMainMenu"):
     # create pagination if total menu options wont fit
     labelsMenu=[]
     if not originalLabelsMenu:
         labelsMenu.append(" ")
         while len(labelsMenu) < totalN:
-            labelsMenu[-1] = " "
+            labelsMenu[-1] = ""
             labelsMenu.append("Back")
-    elif totalN < len(originalLabelsMenu):
+    if totalN < len(originalLabelsMenu):
         startIndex = paginationIndex * totalN - (2 * (paginationIndex))
         endIndex = startIndex + totalN
         labelsMenu = originalLabelsMenu[startIndex:endIndex]
@@ -1410,20 +1414,24 @@ def paginationSystem(totalN, originalLabelsMenu, paginationIndex):
     elif totalN > len(originalLabelsMenu):
         labelsMenu = originalLabelsMenu
         while len(labelsMenu) < totalN:
-            if labelsMenu[-1]=="Back":
-                labelsMenu[-1]=""
+            #if labelsMenu[-1]=="Back":
+             #   labelsMenu[-1]=""
             if len(labelsMenu) < totalN-1:
                 labelsMenu.append("")
             else:
-                labelsMenu.append("Back")
+                if currentSelection=="MainMenu":
+                    labelsMenu.append("")
+                else:
+                    labelsMenu.append(f"Back")
+    else:
+        labelsMenu = originalLabelsMenu
+    #print(f"labelsMenu: {labelsMenu}, originalLabelsMenu: {originalLabelsMenu}")
     return labelsMenu
 
 def GetMainMenu(totalN,theTopFrame,theCurrentSelection,centerOfContours,color,lettersColor,thefontScale,thefontThickness,
                 thelabelsNumbers,thelabelsSpecial,thelabelsABC,originalLabelsMainMenu,prettyPrintRects,centerOfFace,paginationIndex):
-
     createdLabel = []
-
-    labelsMainMenu=paginationSystem(totalN,originalLabelsMainMenu,paginationIndex)
+    labelsMainMenu=paginationSystem(totalN,originalLabelsMainMenu,paginationIndex,"MainMenu")
 
     for i in range(totalN):
         # set option labels on topFrame to make them not transparent
@@ -1651,6 +1659,9 @@ def mainLoop(queue):
     faceMesh = mpFaceMesh.FaceMesh(max_num_faces=1)
     drawSpecs = mpDraw.DrawingSpec(thickness=1, circle_radius=1)
 
+    #enable LLM
+
+
     #set pagination
     paginationIndex=0
 
@@ -1732,7 +1743,7 @@ def mainLoop(queue):
                                                                      theignoreGuiAngles,theignoreAngleArc)
                         (thecurrentSelection,theprevSelection,thecreatedLabelsList,theOriginalCreatedLabelList,theprevCreatedLabelsList,topFrame,thelastWord,
                          thelabelsLMM,thewhatsWritten,thestartTime,thellmIsWorkingFlag,
-                         prettyPrintRects,paginationIndex,currentNVCPath,flagSameSelection) = GetMenuSystem (
+                         prettyPrintRects,paginationIndex,currentNVCPath,flagSameSelection,thellmWaitTime) = GetMenuSystem (
                              queue, topFrame, thetotalOptionsN,thecurrentSelection,theprevSelection, thecreatedLabelsList,theOriginalCreatedLabelList, theprevCreatedLabelsList,
                                centerOfContours, color, lettersColor, dimensionsTop, theshowFPS, thestartTime,
                                thelastWord, theprevLastWord, thellmIsWorkingFlag,
@@ -1788,6 +1799,10 @@ def mainLoop(queue):
         combinedCalibImage = topFrame.copy()
         uiFrame = cv2.addWeighted(uiFrame, alpha, combinedCalibImage, 1 - alpha, 0)
         cv2.imshow("Facial Control HMI", uiFrame)
+    #when user pressed escape:
+    if originalLlmWaitTime != thellmWaitTime:
+        print(f"Saving original Wait time")
+        changeLlmWaitTime(thellmWaitTime)
 
 
 

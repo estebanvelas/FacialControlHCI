@@ -18,7 +18,7 @@ FacialControlHMI_Version=1.0.14
 ignoreGuiAngles=90                              ###list of angles not to be used: 0 being from center to right, and going positive clockwise
 ignoreAngleArc=60                               ###how much to ignore by
 selectionType=TimedOnLocation                   ###BackToCenter,TimedOnLocation
-timeOnLocation=1.1                              ###seconds needed in location, default 1.3
+timeOnLocation=0.9                              ###seconds needed in location, default 1.3
 centerSizePercentageX=25                        ###Percentage of face x
 centerSizePercentageY=25                        ###Percentage of face y
 offsetPercentageX=0                             ###Percentage of face x
@@ -46,7 +46,8 @@ highlightSlotColor= 150,150,0                  ### RGB format for the highlight 
 ###   "Special Chars": Activates submenu where special characters can be selected.
 ###   "NVC": Activates submenu where desired non-verbal Communication options can be selected.
 
-labelsMainMenu=LLM,Quick,BackSpace,Space,Mouse,ABC,Numbers,Special Chars,NVC
+###labelsMainMenu=LLM,Quick,BackSpace,Space,Mouse,ABC,Numbers,Special Chars,NVC
+labelsMainMenu=NVC
 
 
 #------------------Custom Labels, other languages possible
@@ -78,7 +79,7 @@ showWrittenMode=Single              ###Options are: None, Single, Mirror, CloneA
 #------------------LLM Config
 llmWaitTime=1
 SeedWord=Hello                                  ###Change to whatever word you want to start predictions with
-LlmService=Local                                ###Options are: Local, ChatGPT
+LlmService=None                                ###Options are: Local, ChatGPT, None
 LlmKey=Put_key_here
 
 #-------512,126-----------Local LLM Options
