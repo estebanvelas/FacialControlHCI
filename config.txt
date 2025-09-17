@@ -1,4 +1,4 @@
-FacialControlHMI_Version=1.0.14
+FacialControlHMI_Version=1.0.15
 #Copyright (C) [2025] [Esteban Velasquez Toro]
 #
 #   This program is free software: you can redistribute it and/or modify
@@ -47,7 +47,6 @@ highlightSlotColor= 150,150,0                  ### RGB format for the highlight 
 ###   "NVC": Activates submenu where desired non-verbal Communication options can be selected.
 
 labelsMainMenu=LLM,Quick,BackSpace,Space,Mouse,ABC,Numbers,Special Chars,NVC
-###labelsMainMenu=NVC
 
 
 #------------------Custom Labels, other languages possible
@@ -79,10 +78,10 @@ showWrittenMode=Single              ###Options are: None, Single, Mirror, CloneA
 #------------------LLM Config
 llmWaitTime=1
 SeedWord=Hello                                  ###Change to whatever word you want to start predictions with
-LlmService=None                                ###Options are: Local, ChatGPT, None
+LlmService=Local                                ###Options are: Local, ChatGPT, None
 LlmKey=Put_key_here
 
 #-------512,126-----------Local LLM Options
 llmContextSize=128                              ###how many previous tokens will be considered in a local LLM. For performance, default value is 32
 llmBatchSize=32                                 ###How many tokens can be ran through on a batch. For performance, default value is 32
-llmWaitTime=8									###Average time per call to LLM service
+llmWaitTime=12									###Average time per call to LLM service

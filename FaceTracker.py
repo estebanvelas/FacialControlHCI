@@ -80,7 +80,7 @@ selectionCurrentTime=0
 
 #menu selection config file init variables
 
-seedWord="Welcome "
+#seedWord="Welcome"
 
 #ui variables
 selectorFrameColor = (0, 255, 0)  # BGR
@@ -143,7 +143,7 @@ def getAllGuffModels(directory):
 def loadLLM(thePath,contextSize=512,batchSize=126):
     sortedPaths=getAllGuffModels("./")
     print(f"sortedPaths: {sortedPaths}")
-    theLLM = Llama(model_path=sortedPaths[0], n_ctx=contextSize, n_batch=batchSize,n_gpu_layers=30, use_gpu=True)
+    theLLM = Llama(model_path=sortedPaths[0], n_ctx=contextSize, n_batch=batchSize,n_gpu_layers=30, use_gpu=True, verbose=False)
     return theLLM
 
 def generate_text(
@@ -322,7 +322,7 @@ def GetConfigSettings():
             elif key == "showWrittenMode":
                 showWrittenMode = value
             elif key == "SeedWord":
-                SeedWord = value
+                seedWord = value
             elif key == "LlmService":
                 LlmService = value
             elif key == "LlmKey":
@@ -759,15 +759,16 @@ def showWhatsWritten(theTopFrame,dimensionsTop,thewhatsWritten, thefont,thefontS
 
     return theTopFrame,thewhatsWritten
 
-def definePagination(selectedSelectionSlot,paginationIndex,totalN,labelsMenu):
+def definePagination(selectedSelectionSlot,paginationIndex,totalN,labelsMenu,theCurrentSelection):
     if selectedSelectionSlot == "More Options".lower():  # More Options
-        theCurrentSelection = [-1, "MainMenu"]
+        #theCurrentSelection = [-1, "MainMenu"]
+        theCurrentSelection[0]=-1
         paginationIndex = paginationIndex + 1
         if (paginationIndex * totalN - (2 * paginationIndex)) > len(labelsMenu):
             paginationIndex = 0
-        print(f"paginatingMenu: {selectedSelectionSlot}, pagination: {paginationIndex}")
     elif selectedSelectionSlot == "Previous Options".lower():  # More Options
-        theCurrentSelection = [-1, "MainMenu"]
+        #theCurrentSelection = [-1, "MainMenu"]
+        theCurrentSelection[0] = -1
         paginationIndex = paginationIndex - 1
         if paginationIndex < 0:
             paginationIndex = len(labelsMenu) / (totalN - 2)  # math.floor((len(labelsMainMenu)*2)/totalN)
@@ -775,6 +776,8 @@ def definePagination(selectedSelectionSlot,paginationIndex,totalN,labelsMenu):
                 paginationIndex = int(paginationIndex - 1)
             else:
                 paginationIndex = math.floor(paginationIndex)
+    print(
+        f"Menu: {theCurrentSelection[1]} Selected: {selectedSelectionSlot}, pagination: {paginationIndex}/{math.ceil(len(labelsMenu) / totalN)}")
     return paginationIndex
 
 def GetMenuSystem(queue, theTopFrame, totalN, theCurrentSelection,theprevSelection,
@@ -818,11 +821,14 @@ def GetMenuSystem(queue, theTopFrame, totalN, theCurrentSelection,theprevSelecti
             GetCharacterDivisionMenu(theCreatedLabelList, totalN, theTopFrame, theCurrentSelection, centerOfContours, systemSelectorColor, variableSelectionSlotColor, thefontScale, thefontThickness, prettyPrintRects, centerOfFace)
         elif(theCurrentSelection[1]=="Quick"):
             DisplayOtherMenus(thelabelsQuick, labelsQuickOptions, totalN, theTopFrame, centerOfContours, systemSelectorColor, thefontScale, thefontThickness, prettyPrintRects, centerOfFace,paginationIndex)
+        elif (theCurrentSelection[1] == "LLM"):
+            #print(f"thelabelsLMM: {thelabelsLMM}")
+            DisplayOtherMenus(thelabelsLMM, labelsLLMOptions, totalN, theTopFrame, centerOfContours,
+                              systemSelectorColor, thefontScale, thefontThickness, prettyPrintRects, centerOfFace,
+                              paginationIndex)
         elif (theCurrentSelection[1] == "MouseControl"):
             DisplayMouseMenu(labelsMouse, labelsMouseMenu, totalN, theTopFrame, centerOfContours, systemSelectorColor, thefontScale, thefontThickness, prettyPrintRects, centerOfFace,paginationIndex)
             theCurrentSelection[0] = -1
-        elif (theCurrentSelection[1] == "LLM"):
-            DisplayOtherMenus(thelabelsLMM, labelsLLMOptions, totalN, theTopFrame, centerOfContours, systemSelectorColor, thefontScale, thefontThickness, prettyPrintRects, centerOfFace,paginationIndex)
         elif theCurrentSelection[1].lower() == "More Options".lower():  # More Options
             #print(f"Menu: {theCurrentSelection[1]}")
             GetMainMenu(totalN, theTopFrame, theCurrentSelection, centerOfContours, systemSelectorColor, variableSelectionSlotColor, thefontScale,
@@ -848,6 +854,10 @@ def GetMenuSystem(queue, theTopFrame, totalN, theCurrentSelection,theprevSelecti
                 paginationIndex = 0
                 print("Menu: " + str(labelsMainMenu[theCurrentSelection[0]]))
                 theCurrentSelection = [-1, "Quick"]
+            elif selectedSelectionSlot=="LLM".lower():#LLM
+                paginationIndex = 0
+                print(f"Menu: {selectedSelectionSlot}, selection: {theCurrentSelection[0]}")
+                theCurrentSelection = [-1, "LLM"]
             elif selectedSelectionSlot== "BackSpace".lower():#Backspace
                 theCurrentSelection[0] = -1
                 print("pressed: Backspace")
@@ -855,10 +865,6 @@ def GetMenuSystem(queue, theTopFrame, totalN, theCurrentSelection,theprevSelecti
                 keyboard.release(Key.backspace)
                 if len(thewhatsWritten)>0:
                     thewhatsWritten = thewhatsWritten[:-1]
-            elif selectedSelectionSlot=="LLM".lower():#LLM
-                paginationIndex = 0
-                print(f"Menu: {str(labelsMainMenu[theCurrentSelection[0]])}, selection: {theCurrentSelection[0]}")
-                theCurrentSelection = [-1, "LLM"]
             elif selectedSelectionSlot=="Space".lower():#Space
                 theCurrentSelection[0] = -1
                 print("pressed: Space")
@@ -913,7 +919,7 @@ def GetMenuSystem(queue, theTopFrame, totalN, theCurrentSelection,theprevSelecti
                 print(f"Menu: {selectedSelectionSlot}, pagination: {paginationIndex}")
             elif selectedSelectionSlot == "NVC".lower():#Non Verbal Communication: Emojis, custom images, etc!
                 paginationIndex = 0
-                print(f"Menu: {selectedSelectionSlot}")
+                #print(f"Menu: {selectedSelectionSlot}")
                 theCurrentSelection = [-1,"NVC"]
                 GetNVCmenu(theCreatedLabelList,theOriginalCreatedLabelList,totalN, theTopFrame, centerOfContours, systemSelectorColor, variableSelectionSlotColor,
                            thefontScale,
@@ -944,7 +950,7 @@ def GetMenuSystem(queue, theTopFrame, totalN, theCurrentSelection,theprevSelecti
                             theTopFrame, centerOfContours, systemSelectorColor, variableSelectionSlotColor,
                            thefontScale,thefontThickness, prettyPrintRects, centerOfFace, paginationIndex, nvcStructure,currentNVCPath,theCurrentSelection)
                 selectedSelectionSlot = theCreatedLabelList[theCurrentSelection[0]].lower()
-                paginationIndex=definePagination(selectedSelectionSlot,paginationIndex,totalN,theCreatedLabelList)
+                paginationIndex=definePagination(selectedSelectionSlot,paginationIndex,totalN,theCreatedLabelList,theCurrentSelection)
 
                 if any(ext in theCreatedLabelList[theCurrentSelection[0]] for ext in [".png", ".jpg", ".jpeg"]):
                     #keyboard.type(" " + theCreatedLabelList[theCurrentSelection[0]] + " ")
@@ -958,7 +964,7 @@ def GetMenuSystem(queue, theTopFrame, totalN, theCurrentSelection,theprevSelecti
                 #"Click","Back","Double Click","RightClick"
                 selectedSelectionSlot = theCreatedLabelList[theCurrentSelection[0]].lower()
                 paginationIndex = definePagination(selectedSelectionSlot, paginationIndex, totalN,
-                                                   theOriginalCreatedLabelList)
+                                                   theOriginalCreatedLabelList,theCurrentSelection)
                 if theCreatedLabelList[theCurrentSelection[0]] == "Back":  #"Back",
                     theCurrentSelection = [-1, "MainMenu"]
                     print("Selected Option: MainMenu")
@@ -1094,14 +1100,14 @@ def GetMenuSystem(queue, theTopFrame, totalN, theCurrentSelection,theprevSelecti
                 else:
                     selectedSelectionSlot = labelsLettersMenu[theCurrentSelection[0]].lower()
                 #selectedSelectionSlot = theCreatedLabelList[theCurrentSelection[0]-len(labelsLettersMenu)].lower()
-                paginationIndex = definePagination(selectedSelectionSlot, paginationIndex, totalN, theCreatedLabelList)
+                paginationIndex = definePagination(selectedSelectionSlot, paginationIndex, totalN, theCreatedLabelList,theCurrentSelection)
                 theCurrentSelection[0] = -1
             elif(theCurrentSelection[1]=="Quick"):#"LLM","BackSpace","Back"
                 theprevSelection = [-1, theCurrentSelection[1]]#Used for pagination
                 theCreatedLabelList,theOriginalCreatedLabelList=DisplayOtherMenus(thelabelsQuick, labelsQuickOptions, totalN, theTopFrame, centerOfContours, systemSelectorColor, thefontScale, thefontThickness, prettyPrintRects, centerOfFace,paginationIndex)
                 selectedSelectionSlot = theCreatedLabelList[theCurrentSelection[0]].lower()
                 paginationIndex = definePagination(selectedSelectionSlot, paginationIndex, totalN,
-                                                   theOriginalCreatedLabelList)
+                                                   theOriginalCreatedLabelList, theCurrentSelection)
                 if theCreatedLabelList[theCurrentSelection[0]]=="LLM":
                     theCurrentSelection = [-1, "LLM"]
                 elif theCreatedLabelList[theCurrentSelection[0]]=="BackSpace":
@@ -1121,24 +1127,26 @@ def GetMenuSystem(queue, theTopFrame, totalN, theCurrentSelection,theprevSelecti
                 theCurrentSelection[0] = -1
             elif(theCurrentSelection[1]=="LLM"):
                 theprevSelection = [-1, theCurrentSelection[1]]  # Used for pagination
-                DisplayOtherMenus(labelsLMM, labelsLLMOptions, totalN, theTopFrame, centerOfContours, systemSelectorColor, thefontScale, thefontThickness, prettyPrintRects, centerOfFace,paginationIndex)
-                if theCurrentSelection[0] == 0:
+                theCreatedLabelList,theOriginalCreatedLabelList=DisplayOtherMenus(thelabelsLMM, labelsLLMOptions, totalN, theTopFrame, centerOfContours, systemSelectorColor, thefontScale, thefontThickness, prettyPrintRects, centerOfFace,paginationIndex)
+                selectedSelectionSlot = theCreatedLabelList[theCurrentSelection[0]].lower()
+                paginationIndex = definePagination(selectedSelectionSlot, paginationIndex, totalN,
+                                                   theOriginalCreatedLabelList, theCurrentSelection)
+                if theCreatedLabelList[theCurrentSelection[0]]=="Quick":
                     theCurrentSelection = [-1, "Quick"]
-                elif theCurrentSelection[0] == 1:
+                elif theCreatedLabelList[theCurrentSelection[0]] == "BackSpace":
                     print("pressed: Backspace")
                     keyboard.press(Key.backspace)
                     keyboard.release(Key.backspace)
                     if len(thewhatsWritten)>0:
                         thewhatsWritten = thewhatsWritten[:-1]
-                elif theCurrentSelection[0] == 2:
+                elif theCreatedLabelList[theCurrentSelection[0]] == "Back":
                     theCurrentSelection = [-1, "MainMenu"]
-                elif (theCurrentSelection[0] >= len(labelsQuickOptions)):
-                    print("Typed Quick LLM: " + thelabelsLMM[theCurrentSelection[0] - len(labelsLLMOptions)])
-                    keyboard.type(" " + thelabelsLMM[theCurrentSelection[0] - len(labelsLLMOptions)] + " ")
-                    thewhatsWritten = thewhatsWritten + " " + thelabelsLMM[theCurrentSelection[0] - len(labelsLLMOptions)] + " "
-                    thelastWord=thelabelsLMM[theCurrentSelection[0] - len(labelsLLMOptions)]
-                selectedSelectionSlot = theCreatedLabelList[theCurrentSelection[0]].lower()
-                paginationIndex = definePagination(selectedSelectionSlot, paginationIndex, totalN, theCreatedLabelList)
+                else:
+                    if not " Options" in theCreatedLabelList[theCurrentSelection[0]]:
+                        print("Typed LLM Quick: " + theCreatedLabelList[theCurrentSelection[0]])
+                        keyboard.type(" " + theCreatedLabelList[theCurrentSelection[0]] + " ")
+                        thewhatsWritten = thewhatsWritten + " " + theCreatedLabelList[theCurrentSelection[0]] + " "
+                        thelastWord = theCreatedLabelList[theCurrentSelection[0]]
                 theCurrentSelection[0] = -1
 
     # --------------------------
@@ -1158,7 +1166,7 @@ def GetMenuSystem(queue, theTopFrame, totalN, theCurrentSelection,theprevSelecti
                 if thellmWaitTime <= 0:
                     theText = f"LLM has been called with \"{thelastWord}\", Calculating Timeframe for future calls"
                 else:
-                    theText = f"LLM has been called with \"{thelastWord}\", aprox time: {totalTime} seconds out of {thellmWaitTime}"
+                    theText = f"LLM called with \"{thelastWord}\", ~ETA: {totalTime}/{thellmWaitTime} seconds"
                 thelabelsLMM = ["", "", "", "", ""]
                 topFrame,text_size,prettyPrintRects=prettyPrintInCamera(theTopFrame, theText, (int(dimensionsTop[1] / 2), int(dimensionsTop[0])), systemSelectorColor,
                                                                thefontScale, thefontThickness, prettyPrintRects, centerOfFace, onCenter=True)
@@ -1412,6 +1420,7 @@ def paginationSystem(totalN, originalLabelsMenu, paginationIndex,currentSelectio
             labelsMenu[-1] = ""
             labelsMenu.append("Back")
     if totalN < len(originalLabelsMenu):
+        #print(f"totalN: {totalN}, Labels + options total: {len(originalLabelsMenu)}")
         startIndex = paginationIndex * totalN - (2 * (paginationIndex))
         endIndex = startIndex + totalN
         labelsMenu = originalLabelsMenu[startIndex:endIndex]
@@ -1632,8 +1641,7 @@ def overlay_image(frame, overlay, x=0, y=0):
 
 def mainLoop(queue):
     # local variables initiallized from their global counterparts:
-    thewhatsWritten = seedWord
-    thelastWord = seedWord
+
     theprevLastWord = ""
     thecurrentSelection = [-1,"MainMenu"]
     theprevSelection = thecurrentSelection
@@ -1667,6 +1675,8 @@ def mainLoop(queue):
      theLlmService,theLlmKey,
      selectorFrameColor,ReferenceFrameColor,variableSelectionSlotColor,systemSelectionSlotColor,highlightSlotColor)=GetConfigSettings()
 
+    thewhatsWritten = theseedWord
+    thelastWord = theseedWord
     #thellm=loadLLM("zephyr-7b-beta.Q4_K_M.gguf",llmContextSize,llmBatchSize)
     mpDraw = mp.solutions.drawing_utils
     mpFaceMesh = mp.solutions.face_mesh

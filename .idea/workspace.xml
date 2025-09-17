@@ -7,7 +7,6 @@
     <list default="true" id="71809359-efcd-4b9a-9589-a5a0d576c04d" name="Changes" comment="created Database CSV_2_comments.py">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/FaceTracker.py" beforeDir="false" afterPath="$PROJECT_DIR$/FaceTracker.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FacialControlHMI.spec" beforeDir="false" afterPath="$PROJECT_DIR$/FacialControlHMI.spec" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/config.txt" beforeDir="false" afterPath="$PROJECT_DIR$/config.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -45,7 +44,7 @@
   <component name="GithubPullRequestsUISettings">{
   &quot;selectedUrlAndAccountId&quot;: {
     &quot;url&quot;: &quot;https://github.com/estebanvelas/FacialControlHCI.git&quot;,
-    &quot;accountId&quot;: &quot;9b8000af-af0e-4035-9766-2475710ecd7e&quot;
+    &quot;accountId&quot;: &quot;6aac2219-b601-438a-94c7-8a9503d91565&quot;
   }
 }</component>
   <component name="MarkdownSettingsMigration">
@@ -62,6 +61,7 @@
   </component>
   <component name="PropertiesComponent">{
   &quot;keyToString&quot;: {
+    &quot;Python.DatabaseCSV_2_comments.executor&quot;: &quot;Run&quot;,
     &quot;Python.FaceTracker.executor&quot;: &quot;Run&quot;,
     &quot;Python.testBed.executor&quot;: &quot;Run&quot;,
     &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
@@ -79,7 +79,7 @@
       <recent name="C:\Users\evelasquez\PycharmProjects\FacialControlHCI" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.DatabaseCSV_2_comments">
+  <component name="RunManager" selected="Python.FaceTracker">
     <configuration name="DatabaseCSV_2_comments" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="FacialControlHCI" />
       <option name="ENV_FILES" value="" />
@@ -126,8 +126,8 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.DatabaseCSV_2_comments" />
         <item itemvalue="Python.FaceTracker" />
+        <item itemvalue="Python.DatabaseCSV_2_comments" />
       </list>
     </recent_temporary>
   </component>
