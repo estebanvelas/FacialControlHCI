@@ -28,6 +28,7 @@ from turtledemo.penrose import start
 from venv import create
 
 import cv2
+import screeninfo
 import mediapipe as mp
 import time
 import sys
@@ -222,6 +223,7 @@ def GetConfigSettings():
     seedWord="Emotions"
     LlmService="none"
     LlmKey=""
+    screenMode="fullscreen"
     global originalLlmWaitTime
     global selectorFrameColor,ReferenceFrameColor,variableSelectionSlotColor,systemSelectionSlotColor,highlightSlotColor
     selectorFrameColor = (0, 255, 0)  # BGR
@@ -327,6 +329,8 @@ def GetConfigSettings():
                 LlmService = value
             elif key == "LlmKey":
                 LlmKey = value
+            elif key == "screenMode":
+                screenMode = value
 
     #logic to remove LLM if menu not selected
 
@@ -344,13 +348,14 @@ def GetConfigSettings():
           f", showFPS: {showFPS}, showWritten: {showWritten}\n"
           f", llmContextSize: {llmContextSize}, llmBatchSize: {llmBatchSize}, llmWaitTime: {llmWaitTime}\n"
           f", maxWhatsWrittenSize: {maxWhatsWrittenSize}, showWrittenMode: {showWrittenMode}\n"
-          f", seedWord: {seedWord}, LlmService: {LlmService}, LlmKey: {LlmKey}\n")
+          f", seedWord: {seedWord}, LlmService: {LlmService}, LlmKey: {LlmKey}\n"
+          f",screenMode: {screenMode}")
     return (selectionType,timeOnLocation,ignoreGuiAngles,ignoreAngleArc,ttsRate,ttsVolume,ttsVoiceType,
             centerSizePercentageX,centerSizePercentageY,offsetPercentageX,offsetPercentageY,
             totalOptionsN,mouseSpeed,selectionWaitTime,labelsMainMenu,labelsABC,labelsNumbers,labelsSpecial,labelsQuick,
             fontScale,fontThickness,camSizeX,camSizeY, showFPS, showWritten,llmContextSize,llmBatchSize,llmWaitTime,
             maxWhatsWrittenSize,showWrittenMode,seedWord,LlmService,LlmKey,
-            selectorFrameColor,ReferenceFrameColor,variableSelectionSlotColor,systemSelectionSlotColor,highlightSlotColor)
+            selectorFrameColor,ReferenceFrameColor,variableSelectionSlotColor,systemSelectionSlotColor,highlightSlotColor,screenMode)
 
 def GetAreaPoints(totalN, centerOfFaceX, centerOfFaceY, areaSize, theignoreGuiAngles, theignoreAngleArc, offsetAngleDeg=0):
     # Ensure input is list
@@ -1673,18 +1678,15 @@ def mainLoop(queue):
      thellmContextSize,thellmBatchSize,thellmWaitTime,
      themaxWhatsWrittenSize,theshowWrittenMode,theseedWord,
      theLlmService,theLlmKey,
-     selectorFrameColor,ReferenceFrameColor,variableSelectionSlotColor,systemSelectionSlotColor,highlightSlotColor)=GetConfigSettings()
+     selectorFrameColor,ReferenceFrameColor,variableSelectionSlotColor,systemSelectionSlotColor,highlightSlotColor,
+     screenMode)=GetConfigSettings()
 
     thewhatsWritten = theseedWord
     thelastWord = theseedWord
-    #thellm=loadLLM("zephyr-7b-beta.Q4_K_M.gguf",llmContextSize,llmBatchSize)
     mpDraw = mp.solutions.drawing_utils
     mpFaceMesh = mp.solutions.face_mesh
     faceMesh = mpFaceMesh.FaceMesh(max_num_faces=1)
     drawSpecs = mpDraw.DrawingSpec(thickness=1, circle_radius=1)
-
-    #enable LLM
-
 
     #set pagination
     paginationIndex=0
@@ -1822,7 +1824,34 @@ def mainLoop(queue):
         #cv2.imshow("top frame", topFrame)
         combinedCalibImage = topFrame.copy()
         uiFrame = cv2.addWeighted(uiFrame, alpha, combinedCalibImage, 1 - alpha, 0)
-        cv2.imshow("Facial Control HMI", uiFrame)
+
+        #------------------------------------
+        #viewing size options:
+        # ------------------------------------
+        # --- Get screen resolution ---
+        screen = screeninfo.get_monitors()[0]
+        screen_width = screen.width
+        screen_height = screen.height
+        # --- Define window name ---
+        window_name = "Facial Control HMI"
+        cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+
+        # --- Display modes ---
+        if screenMode == 'fullscreen':
+            cv2.setWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+        else:
+            # Exit fullscreen first if needed
+            cv2.setWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_NORMAL)
+
+            if screenMode == 'half':
+                cv2.resizeWindow(window_name, screen_width // 2, screen_height)
+                cv2.moveWindow(window_name, 0, 0)  # Left side
+            elif screenMode == 'quarter':
+                cv2.resizeWindow(window_name, screen_width // 2, screen_height // 2)
+                cv2.moveWindow(window_name, 0, 0)  # Top-left
+
+
+        cv2.imshow(window_name, uiFrame)
     #when user pressed escape:
     if originalLlmWaitTime != thellmWaitTime:
         print(f"Saving original Wait time")

@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="71809359-efcd-4b9a-9589-a5a0d576c04d" name="Changes" comment="created Database CSV_2_comments.py">
+    <list default="true" id="71809359-efcd-4b9a-9589-a5a0d576c04d" name="Changes" comment="retrofitted pagination to LLM, updated parameters for intial seed word.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/FaceTracker.py" beforeDir="false" afterPath="$PROJECT_DIR$/FaceTracker.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/config.txt" beforeDir="false" afterPath="$PROJECT_DIR$/config.txt" afterDir="false" />
@@ -319,7 +319,15 @@
       <option name="project" value="LOCAL" />
       <updated>1742225986385</updated>
     </task>
-    <option name="localTasksCounter" value="24" />
+    <task id="LOCAL-00024" summary="retrofitted pagination to LLM, updated parameters for intial seed word.">
+      <option name="closed" value="true" />
+      <created>1758124377025</created>
+      <option name="number" value="00024" />
+      <option name="presentableId" value="LOCAL-00024" />
+      <option name="project" value="LOCAL" />
+      <updated>1758124377025</updated>
+    </task>
+    <option name="localTasksCounter" value="25" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -355,6 +363,7 @@
     <MESSAGE value="Added Spec file with multiple PC configurations" />
     <MESSAGE value="Fixed bugs: Change in font scale would overlap msgs&#10;fixed mirror methods&#10;Updated size of string functions" />
     <MESSAGE value="created Database CSV_2_comments.py" />
-    <option name="LAST_COMMIT_MESSAGE" value="created Database CSV_2_comments.py" />
+    <MESSAGE value="retrofitted pagination to LLM, updated parameters for intial seed word." />
+    <option name="LAST_COMMIT_MESSAGE" value="retrofitted pagination to LLM, updated parameters for intial seed word." />
   </component>
 </project>

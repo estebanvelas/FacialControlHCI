@@ -14,6 +14,7 @@ FacialControlHMI_Version=1.0.15
 #    You should have received a copy of the GNU General Public License
 #    along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+
 #------------------Menu Selection Variables
 ignoreGuiAngles=90                              ###list of angles not to be used: 0 being from center to right, and going positive clockwise
 ignoreAngleArc=60                               ###how much to ignore by
@@ -28,11 +29,12 @@ mouseSpeed=5                                    ###How fast the mouse will move.
 selectionWaitTime=0.4                           ###How fast can options be selected, Default value of 0.4
 
 #------------------GUI Color Options
-selectorFrameColor = 255, 255, 0                  ### RGB format for the selector, such as the nose
+screenMode=half                           ###Options available: fullscreen, half, quarter
+selectorFrameColor = 255, 255, 0                ### RGB format for the selector, such as the nose
 ReferenceFrameColor = 0, 0, 255                 ### RGB format for the selector, such as the ECRP (center of head)
-variableSelectionSlotColor = 255,0,0          ### RGB format for the font color of variable selection slots
+variableSelectionSlotColor = 255,0,0            ### RGB format for the font color of variable selection slots
 systemSelectionSlotColor = 0,255, 0             ### RGB format for the font color of system selection slots
-highlightSlotColor= 150,150,0                  ### RGB format for the highlight color of all selection slots
+highlightSlotColor= 150,150,0                   ### RGB format for the highlight color of all selection slots
 
 #------------------Menu Order
 #You can include any amount of these:
@@ -84,4 +86,4 @@ LlmKey=Put_key_here
 #-------512,126-----------Local LLM Options
 llmContextSize=128                              ###how many previous tokens will be considered in a local LLM. For performance, default value is 32
 llmBatchSize=32                                 ###How many tokens can be ran through on a batch. For performance, default value is 32
-llmWaitTime=12									###Average time per call to LLM service
+llmWaitTime=13									###Average time per call to LLM service
